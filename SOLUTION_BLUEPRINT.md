@@ -2,7 +2,7 @@
 
 **Status:** Hackathon MVP build specification  
 **Audience:** Six-person implementation team  
-**Scope:** Exactly the MVP described here, including bounded evaluation/retry gates, role-specific Tavily research, and structured observability. Additional demo scenarios are stretch work.
+**Scope:** Exactly the MVP described here, including bounded evaluation/retry gates, role-specific research through CrewAI's built-in search tool, and structured observability. Additional demo scenarios are stretch work.
 
 ## 1. Problem and objective
 
@@ -10,7 +10,7 @@ Business teams have an idea but no quick, structured way to turn it into an impl
 
 SolutionForge AI automates that early-stage consulting workflow. Given a business idea and delivery constraints, it runs four specialized CrewAI agents in a strict sequence and produces a decision-oriented blueprint. The blueprint is a starting point for technical discovery, not a substitute for detailed requirements, security review, or production design.
 
-Tavily research, evaluators, deterministic validators, and bounded retries improve reliability but do not guarantee correctness. Tavily results may be irrelevant, stale, or conflicting, and evaluators can also miss issues. The system must distinguish sourced facts from assumptions, preserve evidence, surface uncertainty, and require human review before business, security, compliance, cost, data-residency, or timeline decisions are treated as authoritative.
+CrewAI search, evaluators, deterministic validators, and bounded retries improve reliability but do not guarantee correctness. Search results may be irrelevant, stale, or conflicting, and evaluators can also miss issues. The system must distinguish sourced facts from assumptions, preserve evidence, surface uncertainty, and require human review before business, security, compliance, cost, data-residency, or timeline decisions are treated as authoritative.
 
 ### MVP objective
 
@@ -19,7 +19,7 @@ Build a working local application that:
 1. Captures the six required user inputs.
 2. Validates the inputs at the API boundary.
 3. Runs Business Analyst → Solution Architect → Technology Advisor → Delivery Planner.
-4. Researches relevant facts with Tavily and preserves source evidence where research is enabled.
+4. Researches relevant facts with CrewAI's built-in search tool and preserves source evidence where research is enabled.
 5. Evaluates every agent output against role-specific quality criteria.
 6. Retries an unsatisfactory agent output with evaluator feedback, up to a configured limit.
 7. Passes only an accepted output downstream between agents.
@@ -35,6 +35,55 @@ Out of scope for the MVP: autonomous implementation, provisioning cloud infrastr
 - Founders and product managers who need a credible first solution direction.
 - Small engineering teams planning an MVP against a fixed deadline.
 - Hackathon judges evaluating whether recommendations adapt to constraints.
+
+## 2.1 Repository and planned file structure
+
+The repository is an early scaffold. The current root contains the workspace metadata and four planning documents; `backend/src/main.py` and `backend/src/tasks.py` are placeholders, `backend/src/agents/` is ready for agent modules, and `frontend/` is ready for the Streamlit entry point.
+
+```text
+mindmesh/
+├── README.md
+├── API_CONTRACTS.md
+├── SOLUTION_BLUEPRINT.md
+├── TODO.md
+├── pyproject.toml
+├── .python-version
+├── backend/
+│   ├── README.md
+│   ├── pyproject.toml
+│   └── src/
+│       ├── main.py
+│       ├── tasks.py
+│       └── agents/
+└── frontend/
+```
+
+The target implementation keeps this layout and adds:
+
+```text
+backend/src/
+├── config.py
+├── routes/
+│   ├── health.py
+│   └── blueprints.py
+├── models.py
+├── orchestration.py
+├── research.py                  # CrewAI WebsiteSearchTool factory/configuration
+├── evaluation.py
+├── reporting.py
+├── tasks.py
+└── agents/
+    ├── business_analyst.py
+    ├── solution_architect.py
+    ├── technology_advisor.py
+    └── delivery_planner.py
+frontend/
+└── streamlit_app.py
+```
+
+No Tavily adapter, Tavily-specific settings module, or separate search microservice should be added.
+
+The complete HTTP contract and route ownership are defined in `API_CONTRACTS.md`.
 
 ## 3. Domain-agnostic use case
 
@@ -227,16 +276,16 @@ Each agent has a role-specific evaluation gate. Deterministic checks validate st
 
 Only accepted output is handed downstream. An unsatisfactory result is retried with evaluator feedback, up to `MAX_AGENT_RETRIES`; exhaustion returns an explicit failure instead of an unverified blueprint.
 
-Tavily is used for focused, role-specific research:
+CrewAI's built-in search tool is used for focused, role-specific research:
 
 - Business Analyst: domain terminology, comparable workflows, and requirement considerations.
 - Solution Architect: architecture patterns, scale, security, and data-residency constraints.
 - Technology Advisor: official technology/cloud documentation, support status, limits, and alternatives.
 - Delivery Planner: delivery practices, technology maturity, testing/deployment constraints, and timeline assumptions.
 
-Research results are passed as titled excerpts with URLs and retrieval metadata. Prompts must distinguish sourced facts from assumptions. Tavily failure is logged and handled explicitly; it must never silently create a source-shaped claim.
+Research results are passed as titled excerpts with URLs and retrieval metadata. Prompts must distinguish sourced facts from assumptions. Search-tool failure is logged and handled explicitly; it must never silently create a source-shaped claim. The tool is attached directly to the relevant CrewAI agents, so no separate Tavily client, API wrapper, or custom search service is part of the MVP.
 
-No separate coordinator agent is needed for the MVP. CrewAI's `Process.sequential` coordinates task order, while deterministic Python code coordinates Tavily calls, evaluation, retries, timeouts, and logging. A coordinator LLM would add another probabilistic decision-maker and could conflict with the Technology Advisor's single-source-of-truth responsibility.
+No separate coordinator agent is needed for the MVP. CrewAI's `Process.sequential` coordinates task order, while deterministic Python code coordinates search-tool execution, evaluation, retries, timeouts, and logging. A coordinator LLM would add another probabilistic decision-maker and could conflict with the Technology Advisor's single-source-of-truth responsibility.
 
 Emit structured events for `run_started`, `agent_started`, `research_completed`, `agent_output`, `evaluation_completed`, `retry_requested`, `agent_accepted`, `agent_failed`, and `run_completed`. Include run ID, role, attempt, latency, evaluator score, failed criteria, and source count. Redact keys and avoid full user input or sensitive generated content by default.
 
@@ -263,10 +312,10 @@ flowchart LR
     MD --> CONVERT[Markdown to styled HTML]
     CONVERT --> UI
     UI --> DL[View / download HTML]
-    BA -. role-specific research .-> TV[Tavily API]
-    SA -. role-specific research .-> TV
-    TA -. role-specific research .-> TV
-    DP -. role-specific research .-> TV
+    BA -. CrewAI built-in search .-> SEARCH[Search tool/provider]
+    SA -. CrewAI built-in search .-> SEARCH
+    TA -. CrewAI built-in search .-> SEARCH
+    DP -. CrewAI built-in search .-> SEARCH
 ```
 
 ### Request lifecycle
@@ -274,7 +323,7 @@ flowchart LR
 1. Streamlit collects the six inputs and sends JSON to FastAPI.
 2. Pydantic validation rejects missing, blank, invalid enum, or invalid timeline values.
 3. FastAPI constructs one crew run with the validated input object.
-4. Each role optionally researches with Tavily, then CrewAI executes its task.
+4. Each role optionally researches with CrewAI's built-in search tool, then CrewAI executes its task.
 5. The evaluator checks the output; failed criteria are fed into a bounded retry.
 6. Only accepted outputs are preserved as downstream context.
 7. The final output is checked for required sections and converted from Markdown to styled HTML.
@@ -291,7 +340,7 @@ flowchart LR
 | API | FastAPI + Pydantic | Typed request validation, clear endpoint contract, and useful error responses |
 | UI | Streamlit | Fast implementation of a form, progress state, rendered report, and download |
 | Report | Markdown converted to styled HTML | Keeps generated content inspectable while giving judges a polished deliverable |
-| Web research | Tavily API | Role-specific web research with source URLs and evidence |
+| Web research | CrewAI `WebsiteSearchTool` | Role-specific web research with source URLs and evidence without a separate Tavily integration |
 | Quality control | Deterministic validators plus optional LLM evaluator | Rejects weak outputs and supplies retry feedback |
 | Observability | Structured Python logging/events | Makes outputs, scores, retries, latency, and failures debuggable |
 | Runtime | Local first; optional container/cloud deployment | Minimizes setup risk while preserving a deployment path |
@@ -306,7 +355,7 @@ The concrete application stack recommended by the Technology Advisor is generate
 | Strict sequential handoff | Configure CrewAI with `Process.sequential`; pass only accepted task outputs through `context`; integration test records execution order |
 | Every stage is evaluated | Run a role-specific evaluator after each task and block downstream handoff on failure |
 | Unsatisfactory output is retried | Pass evaluator feedback into a bounded retry loop; return explicit failure after the retry budget |
-| Research is evidence-aware | Give agents a Tavily tool, require source URLs and fact/assumption separation, and test mocked citations |
+| Research is evidence-aware | Give relevant agents CrewAI's built-in search tool, require source URLs and fact/assumption separation, and test mocked results |
 | Execution is debuggable | Emit structured lifecycle events with run ID, role, attempt, score, latency, and redacted error details |
 | Technology Advisor is the single source of truth | Delivery Planner receives the Advisor output as required context; final assembly does not merge competing stack recommendations; test verifies selected stack is carried forward |
 | Cloud preference is always respected | Validate `cloud_preference` as an enum, include it in every relevant task input, and test that AWS input cannot yield an unqualified alternative-cloud recommendation |
@@ -336,7 +385,7 @@ The concrete application stack recommended by the Technology Advisor is generate
       "Technology Advisor": 1,
       "Delivery Planner": 1
     },
-    "research_enabled": true,
+    "search_enabled": true,
     "accepted_evaluations": 4
   },
   "agents": [
@@ -363,7 +412,7 @@ The concrete application stack recommended by the Technology Advisor is generate
       "Technology Advisor": 1,
       "Delivery Planner": 1
     },
-    "research_enabled": true,
+    "search_enabled": true,
     "accepted_evaluations": 4
   },
   "agents": [
@@ -402,7 +451,7 @@ The response example is intentionally abbreviated for transport documentation; t
 - Prompt builders include all constraints and the correct upstream context.
 - Evaluators accept strong fixture outputs and reject missing, contradictory, or weak outputs.
 - Retry tests verify feedback reaches the next attempt and the retry budget is enforced.
-- Tavily tool calls are mocked; tests verify source URLs are preserved and provider failures are surfaced.
+- CrewAI search-tool calls are mocked; tests verify source URLs are preserved and search-provider failures are surfaced.
 - Structured logs contain lifecycle events with secrets and sensitive input redacted.
 - Report validator detects each required heading and rejects incomplete output.
 - Markdown-to-HTML conversion creates a styled document and preserves headings/code blocks.
@@ -429,8 +478,8 @@ Use deterministic mocked outputs in automated tests. Use a real OpenRouter run o
 | Free-tier model rate limits or outages | Centralize model configuration, use a clear error state, bound retries, and retain mocked integration tests |
 | Evaluator accepts weak or incorrect output | Combine deterministic contract checks with role-specific rubrics and human review for the demo |
 | Retry loop increases cost or latency | Enforce a small configurable retry budget, per-agent timeout, and explicit failure state |
-| Tavily returns irrelevant or stale sources | Use focused role queries, require source URLs, prefer credible domains, and distinguish evidence from assumptions |
-| Tavily or evaluator provider is unavailable | Mock providers in tests and make provider failure behavior explicit; never present an unverified success silently |
+| Search returns irrelevant or stale sources | Use focused role queries, require source URLs, prefer credible domains, and distinguish evidence from assumptions |
+| Search tool or evaluator provider is unavailable | Mock providers in tests and make provider failure behavior explicit; never present an unverified success silently |
 | Logs expose secrets or sensitive business information | Structured redaction, metadata-first logs, and opt-in full artifacts only in local debug mode |
 | Agents produce generic or contradictory advice | Strong role prompts, sequential context, report contract validation, and multi-domain fixture review |
 | Cloud preference is ignored | Typed enum, repeated constraint injection, Technology Advisor ownership, and an explicit integration assertion |
@@ -444,7 +493,7 @@ Use deterministic mocked outputs in automated tests. Use a real OpenRouter run o
 
 After the MVP is stable, possible extensions are:
 
-- Improved Tavily source ranking, domain allowlists, and citations for live technology/cloud information.
+- Improved search-result ranking, domain allowlists, and citations for live technology/cloud information.
 - Persistent evaluation traces and a local run viewer for comparing attempts.
 - More robust progress streaming from FastAPI to Streamlit.
 - Persisted blueprint history and comparison of alternative constraints.
