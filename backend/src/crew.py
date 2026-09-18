@@ -1,9 +1,9 @@
 from crewai import Crew, Process
 
-from backend.src.agents.business_analyst.task import create_business_analyst_task
-from backend.src.agents.solution_architect.task import create_solution_architect_task
-from backend.src.agents.technology_advisor.task import create_technology_advisor_task
-from backend.src.agents.delivery_planner.task import create_delivery_planner_task
+from src.agents.business_analyst.task import create_business_analyst_task
+from src.agents.solution_architect.task import create_solution_architect_task
+from src.agents.technology_advisor.task import create_technology_advisor_task
+from src.agents.delivery_planner.task import create_delivery_planner_task
 
 
 def create_crew(

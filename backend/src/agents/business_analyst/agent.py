@@ -1,7 +1,7 @@
 from crewai import Agent
 
-from backend.src.llm import get_llm
-from backend.src.tools import get_serper_tool
+from src.llm import get_llm
+from src.tools import get_serper_tool
 from .prompt import BUSINESS_ANALYST_PROMPT
 
 

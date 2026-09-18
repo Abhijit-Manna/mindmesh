@@ -1,0 +1,35 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class Settings(BaseSettings):
+
+    # App Config
+    APP_NAME: str = "MindMesh API"
+    
+    # OpenRouter / LLM Settings
+    OPENROUTER_API_KEY: str
+    OPENROUTER_MODEL: str
+    EVALUATION_MODEL: str
+
+    # Serper.dev
+    SERPER_API_KEY: str
+
+    # Agent Retry Settings
+    MAX_AGENT_RETRIES: int = 2
+
+    # Evaluation Settings
+    ENABLE_EVALUATION: bool = True
+    EVALUATION_THRESHOLD: float = 0.70
+
+    # Agent Runtime
+    AGENT_TIMEOUT_SECONDS: int = 120
+
+    # Logging
+    LOG_LEVEL: str = "INFO"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+settings = Settings()
