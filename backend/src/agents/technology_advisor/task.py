@@ -4,13 +4,13 @@ from .agent import create_technology_advisor
 
 
 def create_technology_advisor_task(
-    business_analyst_output: str,
-    solution_architect_output: str,
     technology_preference: str,
     cloud_preference: str,
     expected_daily_traffic: str,
     delivery_timeline_months: int,
     data_hosting_country: str,
+    ba_task: Task,
+    sa_task: Task,
 ) -> Task:
 
     agent = create_technology_advisor()
@@ -18,13 +18,10 @@ def create_technology_advisor_task(
     description = f"""
 Recommend the technology stack for the system.
 
-================ BUSINESS ANALYST OUTPUT ================
+The Business Analyst and Solution Architect outputs
+will be provided as task context.
 
-{business_analyst_output}
-
-================ SOLUTION ARCHITECT OUTPUT ================
-
-{solution_architect_output}
+Use both outputs when making technology recommendations.
 
 ================ USER CONSTRAINTS ================
 
@@ -80,4 +77,5 @@ Return a structured Technology Advisor output.
             "justifications, requirement mappings, and trade-offs."
         ),
         agent=agent,
+        context=[ba_task, sa_task],
     )

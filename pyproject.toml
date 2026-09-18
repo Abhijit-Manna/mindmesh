@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.11"
 dependencies = [
     "crewai-tools>=1.15.22",
-    "crewai[tools]>=1.15.22",
+    "crewai[litellm,tools]>=1.15.22",
 ]
 
 [build-system]

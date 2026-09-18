@@ -4,10 +4,10 @@ from .agent import create_delivery_planner
 
 
 def create_delivery_planner_task(
-    business_analyst_output: str,
-    solution_architect_output: str,
-    technology_advisor_output: str,
     delivery_timeline_months: int,
+    ba_task: Task,
+    sa_task: Task,
+    ta_task: Task,
 ) -> Task:
 
     agent = create_delivery_planner()
@@ -15,18 +15,10 @@ def create_delivery_planner_task(
     description = f"""
 Create the implementation and delivery plan for the system.
 
-================ BUSINESS ANALYST OUTPUT ================
+The Business Analyst, Solution Architect and Technology Advisor outputs
+will be provided as task context.
 
-{business_analyst_output}
-
-================ SOLUTION ARCHITECT OUTPUT ================
-
-{solution_architect_output}
-
-================ TECHNOLOGY ADVISOR OUTPUT ================
-
-{technology_advisor_output}
-
+Use all three outputs when making technology recommendations.
 ================ DELIVERY CONSTRAINT ================
 
 Maximum Delivery Timeline:
@@ -102,4 +94,5 @@ Return a structured Delivery Planner output.
             "future evolution."
         ),
         agent=agent,
+        context=[ba_task, sa_task, ta_task],
     )

@@ -4,22 +4,19 @@ from .agent import create_solution_architect
 
 
 def create_solution_architect_task(
-    business_analyst_output: str,
     technology_preference: str,
     cloud_preference: str,
     expected_daily_traffic: str,
     delivery_timeline_months: int,
     data_hosting_country: str,
+    ba_task: Task,
 ) -> Task:
-
     agent = create_solution_architect()
 
     description = f"""
 Design the high-level architecture for the following system.
-
-================ BUSINESS ANALYST OUTPUT ================
-
-{business_analyst_output}
+The Business Analyst output will be provided as task context.
+Use the BA output as the source of business requirements.
 
 ================ USER CONSTRAINTS ================
 
@@ -67,4 +64,5 @@ Return a structured Solution Architect output.
             "reliability, and MVP/future architecture."
         ),
         agent=agent,
+        context=[ba_task]
     )
