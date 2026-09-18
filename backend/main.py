@@ -11,8 +11,15 @@ app = FastAPI(title=settings.APP_NAME)
 app.include_router(health.router)
 app.include_router(blueprint.router, prefix="/api/v1")
 
+# -------------------------------------------------------------------------
+    # LOCAL CLI TEST RUNNER
+    # This block is ONLY executed when running `python main.py` directly.
+    # It is ignored when launching the FastAPI server (`fastapi dev main.py`).
+    # Use this to quickly verify CrewAI agent workflows without Uvicorn.
+    # -------------------------------------------------------------------------
+
 def main():
-    # Pass inputs directly to instantiate the BaseModel
+    print("[1/3] Preparing test payload...")
     request_data = BlueprintRequest(
         business_idea="An online platform for booking home healthcare services",
         technology_preference="Python",
@@ -21,11 +28,18 @@ def main():
         delivery_timeline_months=3,
         data_hosting_country="India",
     )
-    crew = create_crew(**request_data.model_dump())
 
-    result = crew.kickoff()
-    save_output("final_output.md", result)
-    print(result)
+    try:
+        print("[2/3] Executing CrewAI workflow (this may take 1-2 minutes)...")
+        crew = create_crew(**request_data.model_dump())
+        result = crew.kickoff()
+
+        print("[3/3] Execution completed. Writing output file...")
+        save_output("final_output.md", result)
+        print("Success! Output saved to outputs/final_output.md")
+
+    except Exception as e:
+        print(f"\nExecution failed with error: {e}")
 
 
 if __name__ == "__main__":
