@@ -1,0 +1,25 @@
+from crewai import Agent
+
+from backend.src.llm import get_llm
+from backend.src.tools import get_serper_tool
+
+from .prompt import TECHNOLOGY_ADVISOR_PROMPT
+
+
+def create_technology_advisor() -> Agent:
+    """
+    Create and configure the Technology Advisor agent.
+    """
+
+    return Agent(
+        role="Technology Advisor",
+        goal=(
+            "Select a practical technology stack that satisfies the "
+            "business requirements and proposed architecture."
+        ),
+        backstory=TECHNOLOGY_ADVISOR_PROMPT,
+        llm=get_llm(),
+        tools=[get_serper_tool()],
+        allow_delegation=False,
+        verbose=True,
+    )
