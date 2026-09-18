@@ -1,6 +1,6 @@
 from crewai import Agent
 
-from src.llm import get_llm
+from src.llm import get_ta_llm
 from src.tools import get_serper_tool
 
 from .prompt import TECHNOLOGY_ADVISOR_PROMPT
@@ -18,7 +18,7 @@ def create_technology_advisor() -> Agent:
             "business requirements and proposed architecture."
         ),
         backstory=TECHNOLOGY_ADVISOR_PROMPT,
-        llm=get_llm(),
+        llm=get_ta_llm(),
         tools=[get_serper_tool()],
         allow_delegation=False,
         verbose=True,

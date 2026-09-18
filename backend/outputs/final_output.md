@@ -1,119 +1,73 @@
-1.  **Delivery Overview**
+This delivery plan outlines the strategy to build and deploy the Home Healthcare Booking Platform within the mandated 3-month (12-week) timeline.
 
-    This delivery plan outlines the implementation strategy for the Home Healthcare Booking Platform MVP within a strict 3-month timeline. The focus is on establishing core functionalities for user registration, service search, appointment booking, secure payments, and essential dashboards for both patients and providers, along with a basic administration panel. The architecture leverages AWS cloud services and Python-based microservices, aligning with provided preferences. The plan prioritizes rapid development and deployment of critical features while ensuring scalability, security, and maintainability.
+### 1. Delivery Overview
+We will adopt a **Modular Monolithic** architecture deployed on **AWS (Mumbai Region)** to satisfy data residency requirements. The project follows an Agile development cadence with two-week sprints. Given the 3-month hard constraint, we are prioritizing core workflows (Auth, Search, Booking) and utilizing managed AWS services (Cognito, Fargate, RDS) to reduce custom engineering overhead.
 
-2.  **Business/MVP Scope and Priorities**
+### 2. MVP Scope and Priorities
+**Priority 1 (Critical - Weeks 1-6):** Infrastructure Setup, Authentication, Service Catalog, Basic Provider Search.
+**Priority 2 (Core - Weeks 7-10):** Booking Lifecycle, Notifications, Admin Dashboard.
+**Priority 3 (Polish - Weeks 11-12):** User Profile Management, Security Audits, E2E Testing, Production Handover.
 
-    The MVP will focus on the following high-priority functional requirements to establish a foundational platform:
+*Note: Payment gateway, real-time tracking, and automated document verification are deferred to Post-MVP to protect the 3-month timeline.*
 
-    *   **FR001: User Registration & Profile Management (High Priority):** Basic patient and provider profiles with essential information.
-    *   **FR002: Service Search & Discovery (High Priority):** Basic search by service type and location, displaying provider profiles.
-    *   **FR003: Appointment Booking & Scheduling (High Priority):** Core booking flow, provider acceptance/rejection, and basic notifications.
-    *   **FR004: Secure Payment Processing (High Priority):** Integration with a single payment gateway for immediate transactions.
-    *   **FR005: User Dashboard (Patient) (High Priority):** View upcoming/past appointments, basic history.
-    *   **FR006: User Dashboard (Provider) (High Priority):** View upcoming/past appointments, manage availability.
-    *   **FR007: Administration Panel (High Priority):** Basic user management and service category moderation.
+### 3. Implementation Workstreams
 
-    **Prioritization Rationale:** These functionalities represent the minimum viable product required to facilitate a successful home healthcare service booking transaction, forming the core value proposition of the platform.
+| Workstream | Expected Outcomes | Dependencies | Months |
+| :--- | :--- | :--- | :--- |
+| **Foundation & Infra** | AWS VPC/Security setup, CI/CD pipelines, Database schemas. | None | M1 |
+| **Identity & Access** | AWS Cognito setup, Registration/Login flows. | Foundation | M1 |
+| **Core Booking Logic** | API for Search, Service Catalog, and Booking states. | Identity, Database | M2 |
+| **Frontend/UI** | Responsive Web App, Booking dashboards. | Backend APIs | M2-M3 |
+| **QA & Compliance** | Security hardening, Load testing, Compliance audit. | Core Features | M3 |
 
-3.  **Implementation Workstreams**
+### 4. Team and Roles
+*   **Project Manager/Lead:** Coordinates sprints, manages risks, and tracks timeline.
+*   **Full-Stack Developer (2):** Backend (FastAPI) and Frontend (Next.js) implementation.
+*   **Cloud/DevOps Engineer:** Manages AWS infrastructure (Terraform), CI/CD, and security compliance.
+*   **QA Engineer:** Functional, load, and security testing.
 
-    *   **Workstream: Platform Foundation & Infrastructure Setup**
-        *   **Expected Outcomes:** Configured AWS accounts, VPC, networking, IAM roles, CI/CD pipelines, base services (API Gateway, Cognito, RDS PostgreSQL, OpenSearch), and initial environment deployments (Dev, Test).
-        *   **Dependencies:** Business requirements clarity, AWS account access.
-        *   **Months:** Month 1
-    *   **Workstream: User & Core Services Development**
-        *   **Expected Outcomes:** Implemented User Management Service, Service & Discovery Service, Appointment & Scheduling Service APIs, database schemas for core data, basic patient and provider registration/profile features in frontend.
-        *   **Dependencies:** Platform Foundation, defined API contracts, Frontend Workstream.
-        *   **Months:** Month 1 - Month 2
-    *   **Workstream: Payment & Notification Services Development**
-        *   **Expected Outcomes:** Implemented Payment Processing Service, Notification Service, integrated with selected payment gateway and notification provider, end-to-end payment flow.
-        *   **Dependencies:** User & Core Services Development, Payment Gateway selection and API access, Notification Provider setup.
-        *   **Months:** Month 2
-    *   **Workstream: Frontend Application Development**
-        *   **Expected Outcomes:** Responsive web applications for Patient and Provider dashboards, Service Search, Booking flow, and Profile Management. Basic Admin Panel UI.
-        *   **Dependencies:** User & Core Services Development, Payment & Notification Services APIs.
-        *   **Months:** Month 1 - Month 3
-    *   **Workstream: Quality Assurance & Testing**
-        *   **Expected Outcomes:** Comprehensive unit, integration, system, security, and performance tests executed. Identified and resolved defects. User Acceptance Testing (UAT) completed.
-        *   **Dependencies:** All development workstreams.
-        *   **Months:** Month 2 - Month 3
-    *   **Workstream: Deployment & Release Preparation**
-        *   **Expected Outcomes:** Production environment configured, deployment scripts finalized, monitoring and logging established, Go-Live plan, documentation, and user guides.
-        *   **Dependencies:** All development and testing workstreams.
-        *   **Months:** Month 3
+### 5. Milestones
+*   **M1: Infrastructure & Auth Ready:** Provisioned AWS environment, successful user sign-up/login. (End of Month 1)
+*   **M2: Functional MVP:** Search, Catalog, and Booking workflow operational. (End of Month 2)
+*   **M3: Production Ready:** Full security compliance, load test verification, UAT completion. (End of Month 3)
 
-4.  **Team and Roles**
+### 6. Dependencies and Prerequisites
+*   **AWS Access:** Pre-provisioned accounts in the Mumbai region.
+*   **Manual Vetting Process:** A defined business process for manual provider verification must exist before M3.
+*   **Data Residency:** All CI/CD artifacts must be handled within Indian infrastructure boundaries.
 
-    *   **Role: Project Manager**
-        *   **Responsibilities:** Overall project planning, stakeholder communication, risk management, scope management, team coordination, ensuring adherence to timeline and budget.
-    *   **Role: Solution Architect/Tech Lead**
-        *   **Responsibilities:** Oversee architectural design, ensure technical alignment, provide technical guidance to development teams, review code, ensure NFRs are met.
-    *   **Role: Backend Developers (2-3)**
-        *   **Responsibilities:** Design, develop, test, and deploy Python microservices (User Management, Service & Discovery, Appointment & Scheduling, Payment, Notification, Admin Services) on AWS Lambda/ECS. Database schema design and integration. API development.
-    *   **Role: Frontend Developers (2)**
-        *   **Responsibilities:** Develop responsive Patient, Provider, and Admin web applications using React.js. Integrate with backend APIs. Ensure UI/UX standards and accessibility.
-    *   **Role: DevOps Engineer**
-        *   **Responsibilities:** Set up and manage AWS infrastructure (VPC, IAM, RDS, OpenSearch, API Gateway, CloudFront, ELB), implement CI/CD pipelines, establish monitoring and logging, manage deployments, ensure security best practices.
-    *   **Role: QA Engineer**
-        *   **Responsibilities:** Develop and execute test plans (manual and automated), perform functional, integration, performance, and security testing, report and track defects, assist with UAT.
+### 7. Effort and Complexity Assessment
+*   **Complexity:** Medium (due to regulatory compliance and security requirements).
+*   **Effort:** High. The 3-month window requires parallel development of frontend and backend. 
+*   **Conflict:** Implementing AI-based document verification in the MVP would jeopardize the timeline. **Recommendation:** Defer to Future Scope.
 
-5.  **Milestones**
+### 8. Testing and Quality Activities
+*   **Unit/Integration Testing:** Pytest for all backend logic (automated in CI/CD).
+*   **End-to-End (E2E):** Playwright tests covering the "User books a provider" flow.
+*   **Load Testing:** JMeter/Locust scripts to simulate 10,000 daily user requests.
+*   **Security Scanning:** Static Analysis (SAST) and Dependency scanning via GitHub Actions.
 
-    *   **Milestone: Infrastructure & Core Services Ready**
-        *   **Target Month:** End of Month 1
-        *   **Exit Criteria:**
-            *   AWS foundational infrastructure (VPC, IAM, networking) configured.
-            *   API Gateway, AWS Cognito, RDS PostgreSQL, OpenSearch provisioned and accessible.
-            *   User Management and Service & Discovery microservices deployed to Dev environment with basic CRUD operations.
-            *   CI/CD pipelines established for backend services.
-    *   **Milestone: Core MVP Functionality Complete (Internal Beta)**
-        *   **Target Month:** End of Month 2
-        *   **Exit Criteria:**
-            *   All backend microservices (User Management, Service & Discovery, Appointment & Scheduling, Payment, Notification, Admin) developed and integrated.
-            *   Frontend Patient and Provider applications implement core functionalities (registration, profile management, search, booking, payment initiation, dashboards).
-            *   Basic Admin Panel UI connected to backend.
-            *   Integration with selected Payment Gateway and Notification Provider functional.
-            *   Unit and integration tests for all services pass.
-            *   System deployed to a Test environment for internal testing.
-    *   **Milestone: UAT & Production Readiness**
-        *   **Target Month:** Mid Month 3
-        *   **Exit Criteria:**
-            *   Successful completion of User Acceptance Testing (UAT) by business stakeholders.
-            *   All critical defects from UAT resolved.
-            *   Performance and security testing completed, and identified issues addressed.
-            *   Production environment fully configured and secured.
-            *   Deployment scripts and monitoring tools finalized.
-    *   **Milestone: MVP Go-Live**
-        *   **Target Month:** End of Month 3
-        *   **Exit Criteria:**
-            *   Platform successfully deployed to Production.
-            *   All core MVP functionalities operational and stable.
-            *   Monitoring and alerting systems active.
-            *   Basic operational documentation available.
+### 9. Integration Activities
+*   **AWS Services:** Connect FastAPI to RDS (Postgres) and Cognito via SDKs.
+*   **Notifications:** Integrate SES/SNS for real-time alerting.
+*   **Search:** Indexing of providers into OpenSearch for high-performance retrieval.
 
-6.  **Dependencies and Prerequisites**
+### 10. Deployment and Release Activities
+*   **Infrastructure as Code:** Use Terraform to ensure environment consistency (Dev, Staging, Prod).
+*   **CI/CD:** Automated builds via GitHub Actions; deployment to ECS Fargate.
+*   **Release:** Rolling updates to minimize downtime.
 
-    *   **Business:**
-        *   Finalized specific types of home healthcare services for initial offering.
-        *   Clarity on initial target geographic regions for service delivery.
-        *   Confirmation of legal and regulatory compliance requirements for online healthcare platforms in India.
-        *   Selection and approval of primary payment gateway partner.
-        *   Strategy for initial user (patient and provider) onboarding and acquisition.
-    *   **Technical:**
-        *   Access to AWS accounts with necessary permissions.
-        *   Approved API keys/credentials for Payment Gateway and Notification Provider.
-        *   Availability of skilled Python (Flask/FastAPI), React.js, and AWS DevOps resources.
-        *   Defined API contracts between frontend and backend services.
-        *   Agreed-upon UI/UX design wireframes for frontend development.
+### 11. Delivery Risks
+*   **Regulatory Failure:** Misalignment with Indian privacy laws during data transit/storage.
+*   **Infrastructure Lead Time:** Potential delays in AWS account configuration or permissioning.
+*   **Scope Creep:** Feature requests for "real-time chat" or "payments" emerging mid-sprint.
 
-7.  **Effort and Complexity Assessment**
+### 12. Risk Mitigations
+*   **Regulatory:** Engage legal compliance early; enable AWS CloudTrail for auditability.
+*   **Scope:** Strictly enforce MVP definition. Move any non-core features to a "Future Release" backlog.
+*   **Timeline:** Utilize managed AWS services (Cognito, Fargate) to eliminate building custom, high-risk components.
 
-    *   **High Complexity:**
-        *   **Secure Payment Processing (FR004):** Integration with external payment gateways, handling various transaction states, refunds, and ensuring PCI DSS compliance. High security and error handling requirements.
-        *   **Appointment Booking & Scheduling (FR003):** Managing provider availability, handling concurrent bookings, real-time updates, and notification triggers.
-        *   **Service Search & Discovery (FR002):** Optimizing OpenSearch for performance with complex filtering (location, specialization, availability).
-        *   **AWS Infrastructure Setup:** Configuring secure, scalable, and compliant AWS services, especially with data residency requirements.
-    *   **Medium Complexity:**
-        *   **User Registration & Profile Management (FR001):** Implementing robust authentication/authorization with Cognito, managing diverse profile attributes for patients and providers.
-        *
+### 13. Future Evolution
+*   **Phase 2:** Integrate Payment Gateways (Razorpay) and document verification (OCR).
+*   **Phase 3:** Introduce real-time tracking (GPS) and integrated secure chat.
+*   **Architectural Migration:** Transition from the current Modular Monolith to independent microservices for critical domains if load exceeds thresholds.
