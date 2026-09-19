@@ -19,7 +19,7 @@ class BlueprintRequest(BaseModel):
    # target_agent: str
   #  user_input: str | None = None
 
-@router.get("", status_code=200)
+@router.get("/list", status_code=200)
 async def list_blueprints():
     """List all available run_ids generated from previous executions."""
     outputs_dir = Path("outputs")
@@ -34,7 +34,7 @@ async def list_blueprints():
 
     return {"total": len(run_ids), "run_ids": run_ids}
 
-@router.post("", status_code=201)
+@router.post("/generate", status_code=201)
 async def create_blueprint(payload: BlueprintRequest):
     run_id = str(uuid.uuid4())
     try:
