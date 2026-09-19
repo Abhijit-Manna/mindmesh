@@ -1,6 +1,6 @@
 from crewai import Agent
 
-from src.llm import get_llm
+from src.llm import get_sa_llm
 from src.tools import get_serper_tool
 
 from .prompt import SOLUTION_ARCHITECT_PROMPT
@@ -18,7 +18,7 @@ def create_solution_architect() -> Agent:
             "architecture based on the Business Analyst requirements."
         ),
         backstory=SOLUTION_ARCHITECT_PROMPT,
-        llm=get_llm(),
+        llm=get_sa_llm(),
         tools=[get_serper_tool()],
         allow_delegation=False,
         verbose=True,

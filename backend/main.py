@@ -5,6 +5,7 @@ from src.crew import create_crew
 from src.routes import blueprint, health
 from src.routes.blueprint import BlueprintRequest
 from src.utils.output_file import save_output
+from src.utils.html_converter import markdown_to_html
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -34,9 +35,10 @@ def main():
         crew = create_crew(**request_data.model_dump())
         result = crew.kickoff()
 
-        print("[3/3] Execution completed. Writing output file...")
-        save_output("final_output.md", result)
-        print("Success! Output saved to outputs/final_output.md")
+        print("[3/3] Execution completed. Converting output to HTML...")
+        html_output = markdown_to_html(str(result))
+        save_output("final_output.html", html_output)
+        print("Success! Output saved to outputs/final_output.html")
 
     except Exception as e:
         print(f"\nExecution failed with error: {e}")

@@ -1,119 +1,79 @@
-1.  **Delivery Overview**
+This Delivery Plan for the **Online Mobile Store** is structured to meet the 2-month (8-week) hard constraint by focusing strictly on the defined MVP scope and leveraging the recommended Azure PaaS stack to minimize infrastructure overhead.
 
-    This delivery plan outlines the implementation strategy for the Home Healthcare Booking Platform MVP within a strict 3-month timeline. The focus is on establishing core functionalities for user registration, service search, appointment booking, secure payments, and essential dashboards for both patients and providers, along with a basic administration panel. The architecture leverages AWS cloud services and Python-based microservices, aligning with provided preferences. The plan prioritizes rapid development and deployment of critical features while ensuring scalability, security, and maintainability.
+---
 
-2.  **Business/MVP Scope and Priorities**
+### 1. Delivery Overview
+*   **Goal:** Launch a stable, secure, and compliant e-commerce platform within 8 weeks.
+*   **Strategy:** Modular Monolith architecture on Azure.
+*   **Methodology:** Agile/Scram-style sprints (2-week iterations).
+*   **Constraint Management:** Focus on "Browse-to-Buy" flow. Deferred features are explicitly excluded.
 
-    The MVP will focus on the following high-priority functional requirements to establish a foundational platform:
+### 2. MVP Scope and Priorities
+| Priority | Feature Focus |
+| :--- | :--- |
+| **High** | User Auth (Azure AD B2C), Catalog/Search, Cart, Checkout, Admin Dashboard. |
+| **Medium** | Order tracking, automated email notifications. |
+| **Deferred** | Reviews, advanced recommendations, mobile apps, advanced logistics. |
 
-    *   **FR001: User Registration & Profile Management (High Priority):** Basic patient and provider profiles with essential information.
-    *   **FR002: Service Search & Discovery (High Priority):** Basic search by service type and location, displaying provider profiles.
-    *   **FR003: Appointment Booking & Scheduling (High Priority):** Core booking flow, provider acceptance/rejection, and basic notifications.
-    *   **FR004: Secure Payment Processing (High Priority):** Integration with a single payment gateway for immediate transactions.
-    *   **FR005: User Dashboard (Patient) (High Priority):** View upcoming/past appointments, basic history.
-    *   **FR006: User Dashboard (Provider) (High Priority):** View upcoming/past appointments, manage availability.
-    *   **FR007: Administration Panel (High Priority):** Basic user management and service category moderation.
+### 3. Implementation Workstreams
 
-    **Prioritization Rationale:** These functionalities represent the minimum viable product required to facilitate a successful home healthcare service booking transaction, forming the core value proposition of the platform.
+| Workstream | Expected Outcomes | Dependencies | Months |
+| :--- | :--- | :--- | :--- |
+| **Infrastructure & Security** | Azure Environment, CI/CD, Data Residency compliance. | None | M1 |
+| **Backend API (FastAPI)** | Database schema, REST API, Checkout logic, Auth integration. | Infra setup | M1-M2 |
+| **Frontend Development** | React SPA, Responsive UI, Admin Dashboard. | Backend API | M1-M2 |
+| **Integration & Testing** | Payment Gateway, Email service, UAT, Load Testing. | Backend/Frontend | M2 |
 
-3.  **Implementation Workstreams**
+### 4. Team and Roles
+*   **Project Manager/Lead:** Orchestrates delivery, manages risks, and tracks timeline.
+*   **Full-Stack Developer (2):** Implements React frontend and FastAPI backend.
+*   **DevOps/Cloud Engineer (1):** Manages Azure infrastructure, CI/CD pipelines, and security (Key Vault, AD B2C).
+*   **QA/Automation Tester (1):** Performs unit, integration, and load testing (Locust).
 
-    *   **Workstream: Platform Foundation & Infrastructure Setup**
-        *   **Expected Outcomes:** Configured AWS accounts, VPC, networking, IAM roles, CI/CD pipelines, base services (API Gateway, Cognito, RDS PostgreSQL, OpenSearch), and initial environment deployments (Dev, Test).
-        *   **Dependencies:** Business requirements clarity, AWS account access.
-        *   **Months:** Month 1
-    *   **Workstream: User & Core Services Development**
-        *   **Expected Outcomes:** Implemented User Management Service, Service & Discovery Service, Appointment & Scheduling Service APIs, database schemas for core data, basic patient and provider registration/profile features in frontend.
-        *   **Dependencies:** Platform Foundation, defined API contracts, Frontend Workstream.
-        *   **Months:** Month 1 - Month 2
-    *   **Workstream: Payment & Notification Services Development**
-        *   **Expected Outcomes:** Implemented Payment Processing Service, Notification Service, integrated with selected payment gateway and notification provider, end-to-end payment flow.
-        *   **Dependencies:** User & Core Services Development, Payment Gateway selection and API access, Notification Provider setup.
-        *   **Months:** Month 2
-    *   **Workstream: Frontend Application Development**
-        *   **Expected Outcomes:** Responsive web applications for Patient and Provider dashboards, Service Search, Booking flow, and Profile Management. Basic Admin Panel UI.
-        *   **Dependencies:** User & Core Services Development, Payment & Notification Services APIs.
-        *   **Months:** Month 1 - Month 3
-    *   **Workstream: Quality Assurance & Testing**
-        *   **Expected Outcomes:** Comprehensive unit, integration, system, security, and performance tests executed. Identified and resolved defects. User Acceptance Testing (UAT) completed.
-        *   **Dependencies:** All development workstreams.
-        *   **Months:** Month 2 - Month 3
-    *   **Workstream: Deployment & Release Preparation**
-        *   **Expected Outcomes:** Production environment configured, deployment scripts finalized, monitoring and logging established, Go-Live plan, documentation, and user guides.
-        *   **Dependencies:** All development and testing workstreams.
-        *   **Months:** Month 3
+### 5. Milestones
+| Milestone | Month | Exit Criteria |
+| :--- | :--- | :--- |
+| **M1: Foundation** | M1 | Azure environment live, AD B2C configured, basic database schema deployed. |
+| **M2: Core Features** | M2 | CRUD for Catalog/Orders complete, Auth integrated, Payment integration functional. |
+| **M3: Go-Live** | M2 | Final UAT passed, production deployment, monitoring alerts active. |
 
-4.  **Team and Roles**
+### 6. Dependencies and Prerequisites
+*   **Access:** Provisioned Azure Subscription in "India Central" region.
+*   **External:** Finalized Payment Gateway merchant account (e.g., Razorpay) by Week 4.
+*   **Data:** Initial Product/Inventory CSVs available for bulk import by Week 5.
 
-    *   **Role: Project Manager**
-        *   **Responsibilities:** Overall project planning, stakeholder communication, risk management, scope management, team coordination, ensuring adherence to timeline and budget.
-    *   **Role: Solution Architect/Tech Lead**
-        *   **Responsibilities:** Oversee architectural design, ensure technical alignment, provide technical guidance to development teams, review code, ensure NFRs are met.
-    *   **Role: Backend Developers (2-3)**
-        *   **Responsibilities:** Design, develop, test, and deploy Python microservices (User Management, Service & Discovery, Appointment & Scheduling, Payment, Notification, Admin Services) on AWS Lambda/ECS. Database schema design and integration. API development.
-    *   **Role: Frontend Developers (2)**
-        *   **Responsibilities:** Develop responsive Patient, Provider, and Admin web applications using React.js. Integrate with backend APIs. Ensure UI/UX standards and accessibility.
-    *   **Role: DevOps Engineer**
-        *   **Responsibilities:** Set up and manage AWS infrastructure (VPC, IAM, RDS, OpenSearch, API Gateway, CloudFront, ELB), implement CI/CD pipelines, establish monitoring and logging, manage deployments, ensure security best practices.
-    *   **Role: QA Engineer**
-        *   **Responsibilities:** Develop and execute test plans (manual and automated), perform functional, integration, performance, and security testing, report and track defects, assist with UAT.
+### 7. Effort and Complexity Assessment
+*   **Complexity:** Medium. The use of a modular monolith and managed services (Azure SQL, AD B2C) significantly reduces technical complexity.
+*   **Effort:** High. The 2-month timeline requires parallel development of frontend and backend.
 
-5.  **Milestones**
+### 8. Testing and Quality Activities
+*   **Unit Testing:** Pytest for backend business logic.
+*   **Frontend Testing:** Jest for core components (Cart, Checkout).
+*   **Integration Testing:** End-to-end testing of the "Browse-to-Buy" flow.
+*   **Load Testing:** `Locust.io` to ensure 1,000 DAU capacity.
+*   **Security Scanning:** Static Analysis (SAST) in GitHub Actions.
 
-    *   **Milestone: Infrastructure & Core Services Ready**
-        *   **Target Month:** End of Month 1
-        *   **Exit Criteria:**
-            *   AWS foundational infrastructure (VPC, IAM, networking) configured.
-            *   API Gateway, AWS Cognito, RDS PostgreSQL, OpenSearch provisioned and accessible.
-            *   User Management and Service & Discovery microservices deployed to Dev environment with basic CRUD operations.
-            *   CI/CD pipelines established for backend services.
-    *   **Milestone: Core MVP Functionality Complete (Internal Beta)**
-        *   **Target Month:** End of Month 2
-        *   **Exit Criteria:**
-            *   All backend microservices (User Management, Service & Discovery, Appointment & Scheduling, Payment, Notification, Admin) developed and integrated.
-            *   Frontend Patient and Provider applications implement core functionalities (registration, profile management, search, booking, payment initiation, dashboards).
-            *   Basic Admin Panel UI connected to backend.
-            *   Integration with selected Payment Gateway and Notification Provider functional.
-            *   Unit and integration tests for all services pass.
-            *   System deployed to a Test environment for internal testing.
-    *   **Milestone: UAT & Production Readiness**
-        *   **Target Month:** Mid Month 3
-        *   **Exit Criteria:**
-            *   Successful completion of User Acceptance Testing (UAT) by business stakeholders.
-            *   All critical defects from UAT resolved.
-            *   Performance and security testing completed, and identified issues addressed.
-            *   Production environment fully configured and secured.
-            *   Deployment scripts and monitoring tools finalized.
-    *   **Milestone: MVP Go-Live**
-        *   **Target Month:** End of Month 3
-        *   **Exit Criteria:**
-            *   Platform successfully deployed to Production.
-            *   All core MVP functionalities operational and stable.
-            *   Monitoring and alerting systems active.
-            *   Basic operational documentation available.
+### 9. Integration Activities
+*   **Payment Gateway:** Integrating SDK into FastAPI checkout workflow.
+*   **Identity:** Redirect flow and token handling between React/FastAPI and Azure AD B2C.
+*   **Notification:** Connecting Azure Queue Storage with an SMTP/Email provider.
 
-6.  **Dependencies and Prerequisites**
+### 10. Deployment and Release Activities
+*   **CI/CD:** GitHub Actions configured for automatic deployment to App Service staging slots.
+*   **Production:** Swap Staging to Production after final validation in Week 8.
+*   **Monitoring:** Enable Azure App Insights for real-time error logging on launch.
 
-    *   **Business:**
-        *   Finalized specific types of home healthcare services for initial offering.
-        *   Clarity on initial target geographic regions for service delivery.
-        *   Confirmation of legal and regulatory compliance requirements for online healthcare platforms in India.
-        *   Selection and approval of primary payment gateway partner.
-        *   Strategy for initial user (patient and provider) onboarding and acquisition.
-    *   **Technical:**
-        *   Access to AWS accounts with necessary permissions.
-        *   Approved API keys/credentials for Payment Gateway and Notification Provider.
-        *   Availability of skilled Python (Flask/FastAPI), React.js, and AWS DevOps resources.
-        *   Defined API contracts between frontend and backend services.
-        *   Agreed-upon UI/UX design wireframes for frontend development.
+### 11. Delivery Risks
+*   **Timeline:** 2-month window is aggressive; "feature creep" from stakeholders.
+*   **Integration:** Delay in payment gateway approval or credential setup.
+*   **Data Quality:** Inaccurate product data leading to inventory errors.
 
-7.  **Effort and Complexity Assessment**
+### 12. Risk Mitigations
+*   **Scope:** Strict adherence to MVP list; any new request pushes a low-priority item to "Future Scope."
+*   **Integration:** Start payment gateway onboarding in Week 1 (administrative task).
+*   **Inventory:** Implement a manual "Admin Lock" on inventory updates during the launch phase.
 
-    *   **High Complexity:**
-        *   **Secure Payment Processing (FR004):** Integration with external payment gateways, handling various transaction states, refunds, and ensuring PCI DSS compliance. High security and error handling requirements.
-        *   **Appointment Booking & Scheduling (FR003):** Managing provider availability, handling concurrent bookings, real-time updates, and notification triggers.
-        *   **Service Search & Discovery (FR002):** Optimizing OpenSearch for performance with complex filtering (location, specialization, availability).
-        *   **AWS Infrastructure Setup:** Configuring secure, scalable, and compliant AWS services, especially with data residency requirements.
-    *   **Medium Complexity:**
-        *   **User Registration & Profile Management (FR001):** Implementing robust authentication/authorization with Cognito, managing diverse profile attributes for patients and providers.
-        *
+### 13. Future Evolution
+*   Implement Azure Service Bus for asynchronous event handling (e.g., decoupling email/notification tasks).
+*   Transition from Database-based search to **Azure Cognitive Search** for improved UX.
+*   Automate inventory synchronization with physical warehouse ERP systems.

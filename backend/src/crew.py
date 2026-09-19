@@ -5,7 +5,6 @@ from src.agents.solution_architect.task import create_solution_architect_task
 from src.agents.technology_advisor.task import create_technology_advisor_task
 from src.agents.delivery_planner.task import create_delivery_planner_task
 
-
 def create_crew(
     business_idea: str,
     technology_preference: str,

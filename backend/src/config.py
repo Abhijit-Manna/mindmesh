@@ -6,8 +6,11 @@ class Settings(BaseSettings):
     APP_NAME: str = "MindMesh API"
     
     # OpenRouter / LLM Settings
-    OPENROUTER_API_KEY: str
-    OPENROUTER_MODEL: str
+    GEMINI_API_KEY_BA: str
+    GEMINI_API_KEY_SA: str 
+    GEMINI_API_KEY_TA: str 
+    GEMINI_API_KEY_DP: str 
+    GEMINI_MODEL: str
     EVALUATION_MODEL: str
 
     # Serper.dev
