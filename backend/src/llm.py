@@ -12,7 +12,7 @@ def get_llm(api_key: str) -> LLM:
         model=settings.GEMINI_MODEL,
         api_key=api_key,
         
-        max_tokens=2000,
+        max_tokens=4096,
     )
 
 

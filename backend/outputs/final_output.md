@@ -1,73 +1,84 @@
-This delivery plan outlines the strategy to build and deploy the Home Healthcare Booking Platform within the mandated 3-month (12-week) timeline.
+This delivery plan translates the business requirements, architecture, and technology recommendations into a structured, 3-month execution schedule.
+
+---
 
 ### 1. Delivery Overview
-We will adopt a **Modular Monolithic** architecture deployed on **AWS (Mumbai Region)** to satisfy data residency requirements. The project follows an Agile development cadence with two-week sprints. Given the 3-month hard constraint, we are prioritizing core workflows (Auth, Search, Booking) and utilizing managed AWS services (Cognito, Fargate, RDS) to reduce custom engineering overhead.
+The project will follow an Agile/Iterative approach over 12 weeks. We will prioritize the "Service-Provider-Booking" loop to ensure the core value proposition is ready for launch by the end of Month 3. The architecture relies on AWS Serverless (Python/FastAPI) to minimize operational overhead.
 
-### 2. MVP Scope and Priorities
-**Priority 1 (Critical - Weeks 1-6):** Infrastructure Setup, Authentication, Service Catalog, Basic Provider Search.
-**Priority 2 (Core - Weeks 7-10):** Booking Lifecycle, Notifications, Admin Dashboard.
-**Priority 3 (Polish - Weeks 11-12):** User Profile Management, Security Audits, E2E Testing, Production Handover.
-
-*Note: Payment gateway, real-time tracking, and automated document verification are deferred to Post-MVP to protect the 3-month timeline.*
+### 2. Business/MVP Scope and Priorities
+*   **P0 (Critical):** User Auth (Cognito), Provider Verification Flow, Searchable Provider Directory, Core Booking Engine (Request/Accept/Reject), Payment Gateway (Integration).
+*   **P1 (Important):** Admin Panel (Validation/Management), Basic Notifications (SES/SNS), User/Provider Dashboards.
+*   **Excluded (Future):** Live Chat, AI matching, EHR integration, Video consultations.
 
 ### 3. Implementation Workstreams
 
 | Workstream | Expected Outcomes | Dependencies | Months |
 | :--- | :--- | :--- | :--- |
-| **Foundation & Infra** | AWS VPC/Security setup, CI/CD pipelines, Database schemas. | None | M1 |
-| **Identity & Access** | AWS Cognito setup, Registration/Login flows. | Foundation | M1 |
-| **Core Booking Logic** | API for Search, Service Catalog, and Booking states. | Identity, Database | M2 |
-| **Frontend/UI** | Responsive Web App, Booking dashboards. | Backend APIs | M2-M3 |
-| **QA & Compliance** | Security hardening, Load testing, Compliance audit. | Core Features | M3 |
+| **Foundation & Auth** | AWS Environment, CI/CD, Cognito Setup | None | M1 |
+| **Core Platform Logic** | API & Database schema, Booking/Search engine | Auth, Foundation | M1-M2 |
+| **UI/UX Development** | Responsive React Web App | Core API, UI Design | M2 |
+| **Integration/Admin** | Payment Gateway, Admin Dashboard, Alerts | Core API | M2-M3 |
+| **QA, Compliance & Release** | Security audit, Load testing, Deployment | All above | M3 |
+
+---
 
 ### 4. Team and Roles
-*   **Project Manager/Lead:** Coordinates sprints, manages risks, and tracks timeline.
-*   **Full-Stack Developer (2):** Backend (FastAPI) and Frontend (Next.js) implementation.
-*   **Cloud/DevOps Engineer:** Manages AWS infrastructure (Terraform), CI/CD, and security compliance.
-*   **QA Engineer:** Functional, load, and security testing.
+*   **Project Manager:** Manage timeline, dependencies, and risk mitigation.
+*   **Solution Architect:** Ensure AWS compliance, security, and scalability.
+*   **Full-Stack Developer (2):** Build Python/FastAPI backend and React frontend.
+*   **QA Engineer:** Functional testing, load testing, and compliance verification.
+*   **DevOps Engineer (Shared):** AWS SAM configuration, infrastructure-as-code, and deployment pipelines.
+
+---
 
 ### 5. Milestones
-*   **M1: Infrastructure & Auth Ready:** Provisioned AWS environment, successful user sign-up/login. (End of Month 1)
-*   **M2: Functional MVP:** Search, Catalog, and Booking workflow operational. (End of Month 2)
-*   **M3: Production Ready:** Full security compliance, load test verification, UAT completion. (End of Month 3)
+| Milestone | Target Month | Exit Criteria |
+| :--- | :--- | :--- |
+| **Env & Auth Ready** | Month 1 | Cognito login working; CI/CD pipeline active. |
+| **Beta Core Platform** | Month 2 | Search/Booking/Payments integrated in Dev. |
+| **Compliance/QA Ready** | Month 3 (W10) | Load/Security testing passed; UAT signed off. |
+| **Production Go-Live** | Month 3 (W12) | Successful deployment to `ap-south-1`. |
+
+---
 
 ### 6. Dependencies and Prerequisites
-*   **AWS Access:** Pre-provisioned accounts in the Mumbai region.
-*   **Manual Vetting Process:** A defined business process for manual provider verification must exist before M3.
-*   **Data Residency:** All CI/CD artifacts must be handled within Indian infrastructure boundaries.
+*   **AWS Access:** Provisioning of `ap-south-1` (Mumbai) region accounts.
+*   **Payment Gateway:** Agreement and API keys from a provider (e.g., Razorpay/Stripe India).
+*   **External Data:** Documentation for provider verification legal frameworks.
 
 ### 7. Effort and Complexity Assessment
-*   **Complexity:** Medium (due to regulatory compliance and security requirements).
-*   **Effort:** High. The 3-month window requires parallel development of frontend and backend. 
-*   **Conflict:** Implementing AI-based document verification in the MVP would jeopardize the timeline. **Recommendation:** Defer to Future Scope.
+*   **Complexity:** Medium-High (High focus on data privacy and state consistency for bookings).
+*   **Effort:** High. The 3-month timeline is aggressive; team must maintain high velocity through serverless utilization.
 
 ### 8. Testing and Quality Activities
-*   **Unit/Integration Testing:** Pytest for all backend logic (automated in CI/CD).
-*   **End-to-End (E2E):** Playwright tests covering the "User books a provider" flow.
-*   **Load Testing:** JMeter/Locust scripts to simulate 10,000 daily user requests.
-*   **Security Scanning:** Static Analysis (SAST) and Dependency scanning via GitHub Actions.
+*   **Unit/Integration Testing:** PyTest/Jest integrated into CI/CD.
+*   **Load Testing:** Simulate 10k users/day using AWS distributed load testing tools.
+*   **Security Testing:** Penetration testing for PII exposure, ensuring KMS encryption at rest.
 
 ### 9. Integration Activities
-*   **AWS Services:** Connect FastAPI to RDS (Postgres) and Cognito via SDKs.
-*   **Notifications:** Integrate SES/SNS for real-time alerting.
-*   **Search:** Indexing of providers into OpenSearch for high-performance retrieval.
+*   **Payment Gateway:** Sandbox integration in M2; Production in M3.
+*   **Notification Engine:** Linking SQS triggers to SES/SNS for booking alerts.
+*   **Identity:** Mapping Cognito user attributes to the RDS schema.
 
 ### 10. Deployment and Release Activities
-*   **Infrastructure as Code:** Use Terraform to ensure environment consistency (Dev, Staging, Prod).
-*   **CI/CD:** Automated builds via GitHub Actions; deployment to ECS Fargate.
-*   **Release:** Rolling updates to minimize downtime.
+*   **Infrastructure:** AWS SAM for automated provisioning.
+*   **Data:** Automated migration scripts via Alembic.
+*   **Release:** Staged rollout in Production (Mumbai region only).
 
 ### 11. Delivery Risks
-*   **Regulatory Failure:** Misalignment with Indian privacy laws during data transit/storage.
-*   **Infrastructure Lead Time:** Potential delays in AWS account configuration or permissioning.
-*   **Scope Creep:** Feature requests for "real-time chat" or "payments" emerging mid-sprint.
+*   **Compliance:** Failing data localization or PII storage audits.
+*   **Verification:** Bottlenecks in the manual provider vetting process.
+*   **Timeline:** Complexity of state management in serverless concurrent bookings.
 
 ### 12. Risk Mitigations
-*   **Regulatory:** Engage legal compliance early; enable AWS CloudTrail for auditability.
-*   **Scope:** Strictly enforce MVP definition. Move any non-core features to a "Future Release" backlog.
-*   **Timeline:** Utilize managed AWS services (Cognito, Fargate) to eliminate building custom, high-risk components.
+*   **Compliance:** Involve legal/compliance early; use AWS Config to enforce `ap-south-1` usage.
+*   **Verification:** Prioritize the Admin Panel dashboard UI in M2 to streamline manual vetting.
+*   **Technical:** Use PostgreSQL row-level locking for booking states to ensure consistency.
 
 ### 13. Future Evolution
-*   **Phase 2:** Integrate Payment Gateways (Razorpay) and document verification (OCR).
-*   **Phase 3:** Introduce real-time tracking (GPS) and integrated secure chat.
-*   **Architectural Migration:** Transition from the current Modular Monolith to independent microservices for critical domains if load exceeds thresholds.
+*   **AI Enhancement:** Integrate AI-based matching after accumulating usage data.
+*   **Communication:** Add real-time messaging via WebSockets (API Gateway support).
+*   **Health Ecosystem:** Planned EHR integration following successful platform stabilization.
+
+---
+**Conflict Note:** The 3-month timeline is tight for a high-trust verification system. **Scope Reduction:** If unforeseen complexities in provider verification arise in M2, we will simplify the Admin Panel to manual-entry-only and defer automated document validation APIs to post-MVP.
