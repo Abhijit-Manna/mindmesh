@@ -14,54 +14,34 @@ def create_solution_architect_task(
     agent = create_solution_architect()
 
     description = f"""
-Design the high-level architecture for the following system.
-The Business Analyst output will be provided as task context.
-Use the BA output as the source of business requirements.
+Design a comprehensive, production-grade System Architecture Blueprint based on the Business Analyst requirements.
 
 ================ USER CONSTRAINTS ================
+Technology Preference: {technology_preference}
+Cloud Infrastructure Preference: {cloud_preference}
+Expected Daily Traffic: {expected_daily_traffic}
+Delivery Timeline: {delivery_timeline_months} months
+Data Hosting Country / Region: {data_hosting_country}
 
-Technology Preference:
-{technology_preference}
+================ DELIVERABLES REQUIRED ================
+1. Architectural Style & Design Rationale (Modular Monolith / Microservices / Event-Driven)
+2. Core Component Topology & Responsibility Matrix (Table format)
+3. Step-by-Step Data Flow & Request Lifecycles (Synchronous APIs & Asynchronous pipelines)
+4. Storage, Cache & Data Consistency Model
+5. Security Perimeter, IAM & Data Residency Controls (for {data_hosting_country})
+6. Resilience, Scalability & Failover Patterns (handling {expected_daily_traffic})
+7. Detailed High-Level ASCII System Architecture Diagram (clear, clean text diagram)
+8. Over-Engineering Safeguards & Deferred Architecture Patterns
 
-Cloud Preference:
-{cloud_preference}
-
-Expected Daily Traffic:
-{expected_daily_traffic}
-
-Delivery Timeline:
-{delivery_timeline_months} months
-
-Data Hosting Country:
-{data_hosting_country}
-
-================ REQUIRED ANALYSIS ================
-
-Identify:
-
-- Major system components
-- Responsibilities of each component
-- Communication between components
-- Main data flows
-- External integrations
-- Security considerations
-- Scalability considerations
-- Reliability considerations
-- MVP architecture
-- Future architecture improvements
-
-Keep the architecture realistic for the requested timeline.
-
-Return a structured Solution Architect output.
+Build strictly upon the Business Analyst's requirements. Maintain high technical depth and architectural clarity.
 """
 
     return Task(
         description=description,
         expected_output=(
-            "A structured high-level architecture containing system "
-            "components, responsibilities, communication flows, "
-            "data flows, integrations, security, scalability, "
-            "reliability, and MVP/future architecture."
+            "A comprehensive System Architecture Blueprint containing detailed component topologies, "
+            "step-by-step data flows, security and data residency controls, resilience patterns, "
+            "and a clear ASCII system architecture diagram."
         ),
         agent=agent,
         context=[ba_task]

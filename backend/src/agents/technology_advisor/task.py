@@ -12,70 +12,37 @@ def create_technology_advisor_task(
     ba_task: Task,
     sa_task: Task,
 ) -> Task:
-
     agent = create_technology_advisor()
 
     description = f"""
-Recommend the technology stack for the system.
-
-The Business Analyst and Solution Architect outputs
-will be provided as task context.
-
-Use both outputs when making technology recommendations.
+Conduct an exhaustive Technology Stack Selection and Architectural Trade-off Analysis.
 
 ================ USER CONSTRAINTS ================
+Technology Preference: {technology_preference}
+Cloud Infrastructure Preference: {cloud_preference}
+Expected Daily Traffic: {expected_daily_traffic}
+Delivery Timeline: {delivery_timeline_months} months
+Data Hosting Country / Region: {data_hosting_country}
 
-Technology Preference:
-{technology_preference}
+================ DELIVERABLES REQUIRED ================
+1. Authoritative Recommended Technology Stack Matrix (Layer, Technology, Version, Rationale)
+2. In-Depth Comparative Trade-Off Analysis (Compare chosen Backend, Database, and Queue against 2 viable alternatives each)
+3. Open-Source vs. Enterprise Strategy & Licensing Compliance (MIT, Apache 2.0, vendor lock-in analysis)
+4. Database & Storage Architecture (Schema design considerations, caching tier, queue architecture)
+5. Cloud Services Mapping on {cloud_preference} (Compute, Managed DB, Cache, Object Storage, Network)
+6. Developer Toolchain & Quality Tooling (Testing, Linting, OpenAPI)
+7. Technology Trade-offs, Scalability Limits & Risk Mitigation
 
-Cloud Preference:
-{cloud_preference}
-
-Expected Daily Traffic:
-{expected_daily_traffic}
-
-Delivery Timeline:
-{delivery_timeline_months} months
-
-Data Hosting Country:
-{data_hosting_country}
-
-================ REQUIRED ANALYSIS ================
-
-Recommend:
-
-- Backend technology
-- Frontend technology
-- Database
-- Cache
-- Authentication
-- APIs
-- Messaging/event system if required
-- Infrastructure
-- Cloud services
-- Monitoring
-- Logging
-- Testing
-- Deployment
-
-For each recommendation explain:
-
-1. What it is
-2. Why it is suitable
-3. Which requirement it addresses
-4. Any important trade-offs
-
-Keep the recommended stack practical for the MVP.
-
-Return a structured Technology Advisor output.
+Ensure 100% adherence to {cloud_preference} and {data_hosting_country}. Provide rich, detailed Markdown tables and in-depth technical analysis.
 """
 
     return Task(
         description=description,
         expected_output=(
-            "A structured technology stack with recommendations, "
-            "justifications, requirement mappings, and trade-offs."
+            "An authoritative, highly detailed Technology Stack Specification and Trade-off Analysis "
+            "containing stack matrices, comparative evaluations against alternatives, database and caching architecture, "
+            "and concrete cloud service mappings."
         ),
         agent=agent,
-        context=[ba_task, sa_task],
+        context=[ba_task, sa_task]
     )

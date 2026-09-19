@@ -11,62 +11,40 @@ def create_business_analyst_task(
     delivery_timeline_months: int,
     data_hosting_country: str,
 ) -> Task:
-    """
-    Create the Business Analyst task using the user's
-    business requirements and constraints.
-    """
-
     agent = create_business_analyst()
 
     description = f"""
-Analyze the following business request and produce the
-Business Analyst output according to the required contract.
+Perform an exhaustive Business Analysis and Requirements Specification for the following initiative:
 
-BUSINESS IDEA:
+================ BUSINESS PROBLEM & INPUTS ================
+Business Idea:
 {business_idea}
 
-TECHNOLOGY PREFERENCE:
-{technology_preference}
+Technology Preference: {technology_preference}
+Cloud Preference: {cloud_preference}
+Expected Daily Traffic: {expected_daily_traffic}
+Delivery Timeline: {delivery_timeline_months} months
+Data Hosting Country: {data_hosting_country}
 
-CLOUD PREFERENCE:
-{cloud_preference}
+================ DELIVERABLES REQUIRED ================
+1. Executive Problem Definition & Value Proposition
+2. Stakeholder & Persona Analysis Table (at least 3-4 distinct personas)
+3. Exhaustive Functional Requirements Matrix (minimum 8-12 numbered FRs with Acceptance Criteria & MoSCoW priorities)
+4. Quantified Non-Functional Requirements (P99 Latency, SLA, Scalability, Compliance for {data_hosting_country})
+5. MVP Scope Boundary vs. Deferred Future Scope
+6. Assumptions & Risk Matrix (with Severity, Likelihood, and Mitigations)
+7. Key Open Discovery Questions
 
-EXPECTED DAILY TRAFFIC:
-{expected_daily_traffic}
-
-DELIVERY TIMELINE:
-{delivery_timeline_months} months
-
-DATA HOSTING COUNTRY:
-{data_hosting_country}
-
-Use these inputs as explicit business constraints.
-
-Identify:
-- Users and stakeholders
-- Functional requirements
-- Non-functional requirements
-- MVP scope
-- Future scope
-- Assumptions
-- Constraints
-- Risks
-- Open questions
-- Priority rationale
-
-Do not select specific technologies or make technology recommendations.
-The Technology Advisor will handle technology selection later.
-
-Return the result in the required structured Business Analyst format.
+Format the deliverable with professional Markdown tables, structured sections, and detailed analytical depth.
+Do NOT specify implementation technologies (languages, frameworks, DBs).
 """
 
     return Task(
         description=description,
         expected_output=(
-            "A structured Business Analyst output containing users and "
-            "stakeholders, functional requirements, non-functional "
-            "requirements, MVP scope, future scope, assumptions, "
-            "constraints, risks, open questions, and sources."
+            "An exhaustive, enterprise-grade Business Analysis document containing detailed stakeholder personas, "
+            "a numbered functional requirements matrix with acceptance criteria, quantified NFRs, "
+            "a rigorous MVP scope boundary, and a structured risk register."
         ),
         agent=agent,
     )

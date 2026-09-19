@@ -27,10 +27,12 @@ def render_execution_view(api_client: APIClient):
     completed_agent_indices = set()
     accumulated_logs = []
 
+    num_agents = len(agent_names)
+
     def render_agent_cards(active_idx: int, completed_indices: set):
         with agents_cols_placeholder.container():
-            cols = st.columns(4)
-            for i in range(4):
+            cols = st.columns(num_agents)
+            for i in range(num_agents):
                 with cols[i]:
                     if i in completed_indices:
                         st.markdown(f"""
@@ -77,7 +79,7 @@ def render_execution_view(api_client: APIClient):
         elif ev_type == "agent_start":
             agent_name = event.get("agent", "Agent")
             step = event.get("step", 1)
-            current_active_idx = step - 1
+            current_active_idx = min(step - 1, num_agents - 1)
             render_agent_cards(current_active_idx, completed_agent_indices)
 
             accumulated_logs.append(f"<span class='terminal-time'>[{timestamp}] [{agent_name}]</span> {msg}")
@@ -86,11 +88,29 @@ def render_execution_view(api_client: APIClient):
 
             insight_placeholder.markdown(f"<div class='insight-box'>{ARCHITECTURE_INSIGHTS[current_active_idx % len(ARCHITECTURE_INSIGHTS)]}</div>", unsafe_allow_html=True)
 
+        elif ev_type == "evaluation_start":
+            agent_name = event.get("agent", "Agent")
+            accumulated_logs.append(f"<span class='terminal-time'>[{timestamp}] [Quality Gate]</span> 🔍 {msg}")
+            progress_bar.progress(pct)
+
+        elif ev_type == "evaluation":
+            agent_name = event.get("agent", "Agent")
+            score = event.get("score", 0.85)
+            passed = event.get("passed", True)
+            badge = "✅" if passed else "⚠️"
+            accumulated_logs.append(f"<span class='terminal-time'>[{timestamp}] [Auditor]</span> {badge} [{agent_name}] Quality Score: <b>{score:.2f}</b> — {msg}")
+            progress_bar.progress(pct)
+
+        elif ev_type == "agent_retry":
+            agent_name = event.get("agent", "Agent")
+            accumulated_logs.append(f"<span class='terminal-time'>[{timestamp}] [Retry Gate]</span> 🔄 {msg}")
+            progress_bar.progress(pct)
+
         elif ev_type == "agent_complete":
             agent_name = event.get("agent", "Agent")
             step = event.get("step", 1)
             completed_agent_indices.add(step - 1)
-            if step < 4:
+            if step < num_agents:
                 current_active_idx = step
             render_agent_cards(current_active_idx, completed_agent_indices)
 

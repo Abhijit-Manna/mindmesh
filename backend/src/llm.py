@@ -11,8 +11,7 @@ def get_llm(api_key: str) -> LLM:
     return LLM(
         model=settings.GEMINI_MODEL,
         api_key=api_key,
-        
-        max_tokens=4096,
+        max_tokens=8192,
     )
 
 
@@ -30,3 +29,23 @@ def get_ta_llm() -> LLM:
 
 def get_dp_llm() -> LLM:
     return get_llm(os.getenv("GEMINI_API_KEY_DP", settings.GEMINI_API_KEY_DP))
+
+
+def get_do_llm() -> LLM:
+    api_key = os.getenv("GEMINI_API_KEY_DO") or settings.GEMINI_API_KEY_DO or os.getenv("GEMINI_API_KEY_TA", settings.GEMINI_API_KEY_TA)
+    return get_llm(api_key)
+
+
+def get_rw_llm() -> LLM:
+    api_key = os.getenv("GEMINI_API_KEY_RW") or settings.GEMINI_API_KEY_RW or os.getenv("GEMINI_API_KEY_DP", settings.GEMINI_API_KEY_DP)
+    return get_llm(api_key)
+
+
+def get_ev_llm() -> LLM:
+    api_key = os.getenv("GEMINI_API_KEY_EV") or settings.GEMINI_API_KEY_EV or os.getenv("GEMINI_API_KEY_BA", settings.GEMINI_API_KEY_BA)
+    model_name = settings.EVALUATION_MODEL or settings.GEMINI_MODEL
+    return LLM(
+        model=model_name,
+        api_key=api_key,
+        max_tokens=8192,
+    )

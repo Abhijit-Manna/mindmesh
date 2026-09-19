@@ -1,3 +1,4 @@
+from typing import Optional
 from crewai import Task
 
 from .agent import create_delivery_planner
@@ -8,91 +9,44 @@ def create_delivery_planner_task(
     ba_task: Task,
     sa_task: Task,
     ta_task: Task,
+    do_task: Optional[Task] = None,
 ) -> Task:
-
     agent = create_delivery_planner()
 
+    context_tasks = [ba_task, sa_task, ta_task]
+    if do_task:
+        context_tasks.append(do_task)
+
     description = f"""
-Create the implementation and delivery plan for the system.
+Create an exhaustive, production-ready Implementation and Delivery Plan for the system.
 
-The Business Analyst, Solution Architect and Technology Advisor outputs
-will be provided as task context.
+The Business Analyst, Solution Architect, Technology Advisor, and DevOps Architect deliverables
+are provided as upstream context.
 
-Use all three outputs when making technology recommendations.
-================ DELIVERY CONSTRAINT ================
+================ HARD CONSTRAINTS ================
+Hard Delivery Timeline: {delivery_timeline_months} months (DO NOT EXCEED).
+All MVP milestones, integration, and security testing must be completed within this window.
 
-Maximum Delivery Timeline:
-{delivery_timeline_months} months
+================ DELIVERABLES REQUIRED ================
+1. Delivery Methodology & Governance Framework (Scrum cadence, sprint structure, definition of done)
+2. Comprehensive Workstreams & Epic Breakdown (Detailed table with Epics, Owners, and Durations)
+3. Staffing Model & Team Topology (Roles, FTE allocations, skill profiles, and workstream alignment)
+4. Milestone Schedule with Strict Entry & Exit Criteria (Months 1 through {delivery_timeline_months})
+5. Critical Path Analysis & Pre-requisite Dependencies
+6. Comprehensive Testing, QA & Load Testing Strategy (Targeting expected traffic load, security hardening)
+7. Exhaustive Delivery Risk Register & Mitigation Strategy (Likelihood, Impact, Risk Score, Contingencies)
+8. Post-MVP Evolution Roadmap
 
-================ REQUIRED OUTPUT ================
-
-Create a delivery plan containing:
-
-1. Delivery overview
-
-2. Business/MVP scope and priorities
-
-3. Implementation workstreams
-
-For each workstream include:
-- Name
-- Expected outcomes
-- Dependencies
-- Months
-
-4. Team and roles
-
-For each role include:
-- Role
-- Responsibilities
-
-5. Milestones
-
-For each milestone include:
-- Name
-- Target month
-- Exit criteria
-
-6. Dependencies and prerequisites
-
-7. Effort and complexity assessment
-
-8. Testing and quality activities
-
-9. Integration activities
-
-10. Deployment and release activities
-
-11. Delivery risks
-
-12. Risk mitigations
-
-13. Future evolution
-
-================ IMPORTANT ================
-
-The delivery timeline is a hard constraint.
-
-All MVP milestones must fit within:
-{delivery_timeline_months} months.
-
-Do not extend the timeline.
-
-If the proposed scope cannot fit within the timeline,
-identify the scope conflict and explain what should be
-deferred to future scope.
-
-Return a structured Delivery Planner output.
+Build upon all upstream technical choices. Provide actionable, highly structured Markdown tables and deep operational planning.
 """
 
     return Task(
         description=description,
         expected_output=(
-            "A structured delivery plan containing workstreams, "
-            "team roles, milestones, dependencies, effort, "
-            "testing, deployment, risks, mitigations, and "
-            "future evolution."
+            "An exhaustive Delivery and Implementation Plan containing agile governance models, "
+            "workstream breakdowns, staffing matrices, phase-by-phase milestone roadmaps with exit criteria, "
+            "testing strategies, and a comprehensive risk register."
         ),
         agent=agent,
-        context=[ba_task, sa_task, ta_task],
+        context=context_tasks,
     )
