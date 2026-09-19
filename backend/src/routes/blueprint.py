@@ -6,7 +6,7 @@ from src.crew import create_crew
 from src.utils.output_file import save_output
 from src.utils.html_converter import markdown_to_html
 
-router = APIRouter(prefix="/api/v1/blueprints", tags=["Blueprints"])
+router = APIRouter(prefix="/blueprints", tags=["Blueprints"])
 
 class BlueprintRequest(BaseModel):
     business_idea: str
@@ -19,6 +19,8 @@ class BlueprintRequest(BaseModel):
 #class RegenerateRequest(BaseModel):
    # target_agent: str
   #  user_input: str | None = None
+@router.get("", status_code=200)
+@router.get("/", status_code=200)
 
 @router.get("/list", status_code=200)
 async def list_blueprints():
@@ -35,6 +37,8 @@ async def list_blueprints():
 
     return {"total": len(run_ids), "run_ids": run_ids}
 
+@router.post("", status_code=201)
+@router.post("/", status_code=201)
 @router.post("/generate", status_code=201)
 async def create_blueprint(payload: BlueprintRequest):
     run_id = str(uuid.uuid4())
@@ -55,7 +59,9 @@ async def create_blueprint(payload: BlueprintRequest):
         save_output(filename, html_content)
         save_output("final_output.html", html_content)
 
-        return {"run_id": run_id, "status": "completed", "file_saved": f"outputs/{filename}" ,"result": html_content}
+        return {"run_id": run_id, "status": "completed", 
+                "file_saved": f"outputs/{filename}" ,
+                "result": html_content}
     except Exception as e:
         raise HTTPException(
             status_code=500,

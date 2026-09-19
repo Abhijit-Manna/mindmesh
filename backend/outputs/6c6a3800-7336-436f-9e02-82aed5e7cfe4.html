@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MindMesh Solution Blueprint</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        h1, h2, h3 {
+            color: #1f2937;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        th {
+            background: #f3f4f6;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 3px 6px;
+            border-radius: 4px;
+        }
+
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+<h1>Delivery Plan: SolutionForge AI Marketplace</h1>
+<p>This plan outlines the roadmap to deliver the MVP within the hard 4-month constraint. The strategy focuses on a <strong>Modular Monolith</strong> architecture to minimize infrastructure overhead while ensuring the "Golden Path" is robust, secure, and compliant.</p>
+<hr />
+<h3>1. Delivery Overview</h3>
+<ul>
+<li><strong>Goal:</strong> Launch a production-ready, scalable marketplace MVP for 10,000 DAU.</li>
+<li><strong>Approach:</strong> 16-week agile delivery (4-week sprints).</li>
+<li><strong>Constraint Management:</strong> The 4-month timeline is protected by enforcing a "Golden Path" focus (Browse -&gt; Order -&gt; Pay -&gt; Dispatch).</li>
+</ul>
+<h3>2. Business/MVP Scope and Priorities</h3>
+<p><strong>Prioritized Scope:</strong>
+1.  <strong>Identity:</strong> User registration &amp; RBAC.
+2.  <strong>Catalog:</strong> Products &amp; search.
+3.  <strong>Checkout:</strong> Cart, Payment Gateway integration, and real-time inventory locking (ACID compliant).
+4.  <strong>Operations:</strong> Seller dashboard, Order status tracking, and Logistics webhook triggers.</p>
+<p><strong>Deferred to Future Scope:</strong>
+*   Recommendation Engine, In-app messaging, Loyalty Programs, and Analytics suite.</p>
+<hr />
+<h3>3. Implementation Workstreams</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Workstream</th>
+<th style="text-align: left;">Outcomes</th>
+<th style="text-align: left;">Dependencies</th>
+<th style="text-align: left;">Months</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Foundation</strong></td>
+<td style="text-align: left;">Infrastructure (IaC/K8s), CI/CD, Auth Service</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">M1</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Catalog &amp; User</strong></td>
+<td style="text-align: left;">Product management, User profiles, RBAC</td>
+<td style="text-align: left;">Foundation</td>
+<td style="text-align: left;">M1-M2</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Transaction Core</strong></td>
+<td style="text-align: left;">Cart, Checkout, Inventory locking, Payment</td>
+<td style="text-align: left;">Catalog/Auth</td>
+<td style="text-align: left;">M2-M3</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Ops &amp; Logistics</strong></td>
+<td style="text-align: left;">Seller Dashboard, Logistics Webhooks</td>
+<td style="text-align: left;">Transaction Core</td>
+<td style="text-align: left;">M3</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>QA &amp; Hardening</strong></td>
+<td style="text-align: left;">Load testing, Security audit, Deployment</td>
+<td style="text-align: left;">All</td>
+<td style="text-align: left;">M4</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>4. Team and Roles</h3>
+<ul>
+<li><strong>Project Lead (1):</strong> Coordinate cross-workstream dependencies and manage timeline risks.</li>
+<li><strong>Backend Engineer (2):</strong> Develop FastAPI services, DB schema, and Redis integration.</li>
+<li><strong>Frontend Engineer (1):</strong> Build React SPA and integrate API endpoints.</li>
+<li><strong>DevOps/SRE (1):</strong> Manage Terraform, K8s in Indian regions, and CI/CD pipelines.</li>
+<li><strong>QA Engineer (1):</strong> Develop Pytest/Playwright automation and handle UAT.</li>
+</ul>
+<hr />
+<h3>5. Milestones</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Milestone</th>
+<th style="text-align: left;">Target</th>
+<th style="text-align: left;">Exit Criteria</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>M1: Core Infra &amp; Auth</strong></td>
+<td style="text-align: left;">Month 1</td>
+<td style="text-align: left;">CI/CD active; Auth service deployed; K8s environment in India region.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>M2: Catalog &amp; User</strong></td>
+<td style="text-align: left;">Month 2</td>
+<td style="text-align: left;">Products CRUD active; User RBAC functional; API docs available.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>M3: Transactions</strong></td>
+<td style="text-align: left;">Month 3</td>
+<td style="text-align: left;">Checkout flow complete; Inventory locking tested; Payment gateway integrated.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>M4: Launch Ready</strong></td>
+<td style="text-align: left;">Month 4</td>
+<td style="text-align: left;">Logistics hooks live; Load testing passed; Security audit approved.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>6. Dependencies and Prerequisites</h3>
+<ul>
+<li><strong>External:</strong> Procurement of Payment Gateway (e.g., Razorpay) merchant ID.</li>
+<li><strong>Legal:</strong> Confirmation of logistics API/webhook schema.</li>
+<li><strong>Infrastructure:</strong> Cloud vendor accounts provisioned in Indian region (<code>ap-south-1</code>).</li>
+</ul>
+<h3>7. Effort and Complexity Assessment</h3>
+<ul>
+<li><strong>Complexity:</strong> High (Real-time inventory management in high concurrency).</li>
+<li><strong>Effort:</strong> Balanced. The "Modular Monolith" approach reduces the overhead of service discovery and inter-service authentication, keeping the timeline realistic.</li>
+</ul>
+<h3>8. Testing and Quality Activities</h3>
+<ul>
+<li><strong>Unit/Integration:</strong> Pytest for all backend logic (coverage &gt; 80%).</li>
+<li><strong>E2E:</strong> Playwright for the critical "Browse to Checkout" flow.</li>
+<li><strong>Performance:</strong> k6 for load testing (10k DAU simulation).</li>
+<li><strong>Security:</strong> Static analysis (SAST) in CI/CD; dependency scanning for vulnerabilities.</li>
+</ul>
+<h3>9. Integration Activities</h3>
+<ul>
+<li><strong>Payment Gateway:</strong> Integration testing in Sandbox environment before month 3.</li>
+<li><strong>Logistics:</strong> Mocking the Logistics API initially, followed by Partner UAT.</li>
+</ul>
+<h3>10. Deployment and Release Activities</h3>
+<ul>
+<li><strong>Strategy:</strong> Blue-Green deployment on Kubernetes.</li>
+<li><strong>Data Residency:</strong> Terraform configurations hardcoded to India regions.</li>
+<li><strong>Pre-Launch:</strong> Final Pen-Test (penetration test) and UAT sign-off by Stakeholders.</li>
+</ul>
+<hr />
+<h3>11. Delivery Risks</h3>
+<ol>
+<li><strong>Concurrency:</strong> Overselling during high traffic.</li>
+<li><strong>Multi-Cloud Overhead:</strong> Excessive configuration time for portability.</li>
+<li><strong>Compliance:</strong> Delays in India-specific regulatory approvals.</li>
+</ol>
+<h3>12. Risk Mitigations</h3>
+<ol>
+<li><strong>Overselling:</strong> Use Postgres <code>SELECT ... FOR UPDATE</code> row-level locking.</li>
+<li><strong>Multi-Cloud:</strong> Use "Managed K8s" (EKS/AKS) to abstract underlying cloud differences.</li>
+<li><strong>Compliance:</strong> Ensure the Payment Gateway chosen is already RBI-compliant; use "Tokenization" to avoid storing PII (PCI-DSS out-of-scope for platform).</li>
+</ol>
+<h3>13. Future Evolution</h3>
+<ul>
+<li><strong>Post-MVP:</strong> Extract domain modules (Catalog, Order, User) into isolated microservices.</li>
+<li><strong>Optimization:</strong> Implement CDN for static assets and integrate ElasticSearch for advanced product discovery.</li>
+<li><strong>AI:</strong> Introduce the Python-based recommendation worker once the user base matures.</li>
+</ul>
+</body>
+</html>
