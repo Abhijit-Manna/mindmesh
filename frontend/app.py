@@ -29,10 +29,10 @@ st.set_page_config(
     page_title="MindMesh — AI Architecture Blueprint Engine",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+   # initial_sidebar_state="expanded"
 )
 
-# --- Senior Developer Custom CSS & Animations ---
+# --- Developer Custom CSS & Animations ---
 CUSTOM_CSS = """
 <style>
 /* Global Dark Tech Design System */
@@ -166,9 +166,9 @@ if "form_data" not in st.session_state:
 
 api_client = APIClient(base_url=st.session_state.api_url)
 
-# --- Sidebar Controls & Connection Status ---
+#--- Sidebar Controls & Connection Status ---
 with st.sidebar:
-    st.image("https://img.icons8.com/isometric-folders/100/circuit-board.png", width=64)
+    st.image("logo.png", width=100)
     st.title("MindMesh Engine")
     st.caption("AI-Powered Enterprise Solution Blueprinting")
     st.markdown("---")
@@ -234,9 +234,9 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header-card">
     <h1 style="margin:0; font-size: 2.2rem; color: #f8fafc; font-weight: 700;">
-        ⚡ MindMesh — Multi-Agent Solution Architect
+        ⚡ SolutionForge AI — A Multi-Agent Solution Architect for All Your Business Needs
     </h1>
-    <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 1.05rem;">
+    <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 1.05rem; line-height: 1.5;">
         Transform your business vision into an enterprise-grade technical architecture & delivery roadmap powered by autonomous CrewAI agents.
     </p>
 </div>
@@ -283,7 +283,8 @@ if st.session_state.execution_state == "idle":
             # Field 2: technology_preference (str)
             technology_preference = st.selectbox(
                 "2. Technology Stack Preference *",
-                options=[
+                
+                options=["Select your preference",
                     "Open-Source Stack (Python FastAPI / Node.js + React + PostgreSQL)",
                     "Enterprise Stack (Java Spring Boot / C# .NET Core + Angular)",
                     "Microservices Mesh (Go Microservices + gRPC + React)",
@@ -296,7 +297,7 @@ if st.session_state.execution_state == "idle":
             # Field 3: cloud_preference (str)
             cloud_preference = st.selectbox(
                 "3. Cloud Infrastructure Preference *",
-                options=["AWS", "Google Cloud (GCP)", "Azure", "Multi-Cloud Ecosystem", "On-Premises / Bare Metal","None"],
+                options=["Select your preference","AWS", "Google Cloud (GCP)", "Azure", "Multi-Cloud Ecosystem", "On-Premises / Bare Metal","No Preference"],
                 index=0,
                 help="Select primary hosting provider."
             )
@@ -304,7 +305,7 @@ if st.session_state.execution_state == "idle":
             # Field 4: expected_daily_traffic (str)
             expected_daily_traffic = st.selectbox(
                 "4. Expected Daily Traffic & Scale *",
-                options=[
+                options=[ "Select your preference",
                     "10,000 DAU (Standard MVP Scale)",
                     "50,000 DAU (Peak 2,500 req/sec)",
                     "100,000 DAU (High Concurrency & Load)",
@@ -328,7 +329,7 @@ if st.session_state.execution_state == "idle":
             # Field 6: data_hosting_country (str)
             data_hosting_country = st.selectbox(
                 "6. Data Hosting Region / Jurisdiction *",
-                options=[
+                options=["Select your preference",
                     "United States",
                     "India",
                     "Germany (EU GDPR Compliant)",
