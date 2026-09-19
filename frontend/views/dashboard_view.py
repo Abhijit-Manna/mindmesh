@@ -28,9 +28,17 @@ def render_dashboard_view():
             use_container_width=True
         )
     with col_btn3:
-        if st.button(" New Blueprint", use_container_width=True):
+        if st.button("✨ New Blueprint", use_container_width=True):
             st.session_state.execution_state = "idle"
             st.session_state.blueprint_result = None
+            st.session_state.form_data = {
+                "business_idea": "",
+                "technology_preference": None,
+                "cloud_preference": None,
+                "expected_daily_traffic": None,
+                "delivery_timeline_months": 4,
+                "data_hosting_country": None
+            }
             st.rerun()
 
     st.markdown("---")

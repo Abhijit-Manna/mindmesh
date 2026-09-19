@@ -2,7 +2,7 @@
 MindMesh — AI System Blueprint Generator (Streamlit Frontend)
 
 Modular Entry Point coordinating:
-- Custom dark tech design system (styles.py)
+- Custom light design system (styles.py)
 - Top Hero Section & Brand Header (components/header.py)
 - Recent Blueprints History Sidebar (components/sidebar.py)
 - Multi-step views: Form View, Real-Time Execution View, Dashboard View
@@ -67,10 +67,10 @@ elif st.session_state.execution_state == "completed":
     render_dashboard_view()
 
 elif st.session_state.execution_state == "error":
-    st.error("❌ Blueprint Generation Failed")
+    st.error("Blueprint Generation Failed")
     st.warning(f"Error details: {st.session_state.error_message}")
-    st.info("💡 Ensure backend is running (`uv run fastapi dev main.py`) and API keys in backend `.env` are valid.")
+    st.info("Ensure backend is running (`uv run fastapi dev main.py`) and API keys in backend `.env` are valid.")
 
-    if st.button("⬅️ Return to Parameters Form"):
+    if st.button("Return to Parameters Form"):
         st.session_state.execution_state = "idle"
         st.rerun()

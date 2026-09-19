@@ -36,21 +36,21 @@ def render_execution_view(api_client: APIClient):
                         st.markdown(f"""
                         <div class="agent-card completed">
                             <span style="font-size:1.25rem;">✅</span> <b>{agent_names[i]}</b><br/>
-                            <span style="font-size:0.78rem; color:#10b981;">Completed</span>
+                            <span style="font-size:0.78rem; color:#047857;">Completed</span>
                         </div>
                         """, unsafe_allow_html=True)
                     elif i == active_idx:
                         st.markdown(f"""
                         <div class="agent-card active">
                             <span style="font-size:1.25rem;">{agent_icons[i]}</span> <b>{agent_names[i]}</b><br/>
-                            <span style="font-size:0.78rem; color:#818cf8;">Processing...</span>
+                            <span style="font-size:0.78rem; color:#4f46e5;">Processing...</span>
                         </div>
                         """, unsafe_allow_html=True)
                     else:
                         st.markdown(f"""
                         <div class="agent-card">
                             <span style="font-size:1.25rem;">⏳</span> <b>{agent_names[i]}</b><br/>
-                            <span style="font-size:0.78rem; color:#64748b;">Queued</span>
+                            <span style="font-size:0.78rem; color:#94a3b8;">Queued</span>
                         </div>
                         """, unsafe_allow_html=True)
 

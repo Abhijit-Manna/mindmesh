@@ -1,46 +1,30 @@
 """
-MindMesh Frontend - Hero Header Component
+MindMesh Frontend - Hero Header Component (Ideogram-style)
 """
 
-import os
-import base64
 import streamlit as st
 
 
-def resolve_logo_b64() -> str:
-    """Resolve and base64-encode the MindMesh logo image."""
-    frontend_dir = os.path.dirname(os.path.dirname(__file__))
-    target_png = os.path.join(frontend_dir, "logo.png")
-    target_jpg = os.path.join(frontend_dir, "logo.jpg")
-
-    for img_path in [target_png, target_jpg]:
-        if os.path.exists(img_path):
-            try:
-                with open(img_path, "rb") as img_f:
-                    return base64.b64encode(img_f.read()).decode("utf-8")
-            except Exception:
-                pass
-    return ""
-
-
 def render_hero_header(is_healthy: bool):
-    """Render the top Hero Section with glowing logo and backend status."""
-    logo_b64 = resolve_logo_b64()
-    status_class = "status-online" if is_healthy else "status-offline"
-    status_text = "🟢 Live Backend Connected" if is_healthy else "🔴 Backend Offline"
-    logo_img_html = f'<img src="data:image/jpeg;base64,{logo_b64}" alt="MindMesh Logo" />' if logo_b64 else '<span style="font-size:2.6rem;">⚡</span>'
+    """Render clean Ideogram-style hero — eyebrow, serif headline, subtitle, Try now pill button."""
+    status_dot = "●" if is_healthy else "○"
+    status_text = "System active" if is_healthy else "Backend offline"
+    status_color = "#10b981" if is_healthy else "#ef4444"
 
     st.markdown(f"""
-    <div class="hero-header-card">
-        <div class="hero-logo-container">
-            {logo_img_html}
-        </div>
-        <div class="hero-text-container">
-            <h1 class="hero-title">MindMesh — SolutionForge AI</h1>
-            <p class="hero-subtitle">
-                Autonomous Multi-Agent Solution Architecture Engine powered by CrewAI & Gemini. Synthesize business visions into executive blueprints in real-time.
-            </p>
-            <span class="hero-status-pill {status_class}">{status_text}</span>
+    <div class="hero-section">
+        <div class="hero-eyebrow">MINDMESH ARCHITECT</div>
+        <h1 class="hero-title">One reference idea.<br/>Endless consistent architectures.</h1>
+        <p class="hero-subtitle">
+            Provide a concept and generate production-grade system architecture, multi-agent evaluation, technology trade-offs, and delivery roadmaps. Precision engineering across every run.
+        </p>
+        <div class="hero-actions">
+            <a href="#define-solution-parameters" class="hero-cta-btn">Try now</a>
+            <div class="hero-status">
+                <span style="color:{status_color}; font-size:0.75rem;">{status_dot}</span>
+                <span>{status_text}</span>
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
+

@@ -1,211 +1,281 @@
 """
-MindMesh Frontend - Global CSS Styling & Visual Theme
+MindMesh Frontend - Global CSS Styling & Visual Theme (Light Mode)
 """
 
 CUSTOM_CSS = """
 <style>
-/* Global Dark Tech Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap');
+
+/* Global Light Design System */
 :root {
-    --bg-primary: #0b0f19;
-    --bg-card: #151c2c;
+    --bg-primary: #f8fafc;
+    --bg-card: #ffffff;
     --accent-indigo: #6366f1;
-    --accent-cyan: #06b6d4;
-    --accent-emerald: #10b981;
-    --border-color: rgba(255, 255, 255, 0.08);
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
+    --accent-violet: #7c3aed;
+    --accent-cyan: #0891b2;
+    --accent-emerald: #059669;
+    --border-color: rgba(99, 102, 241, 0.15);
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
 }
 
+/* Global App Background */
 .stApp {
-    background-color: #0d1117;
+    background: #f8fafc !important;
+    font-family: 'Inter', sans-serif;
 }
 
-/* Sidebar Custom Styling */
+/* Sidebar Styling */
 section[data-testid="stSidebar"] {
-    background-color: #090d16 !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: #ffffff !important;
+    border-right: 1px solid #e2e8f0 !important;
+}
+
+section[data-testid="stSidebar"] * {
+    color: #1e293b !important;
+}
+
+section[data-testid="stSidebar"] .stCaption p {
+    color: #64748b !important;
 }
 
 .sidebar-history-card {
-    background: #131b2e;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 12px;
-    transition: all 0.2s ease;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    transition: all 0.15s ease;
 }
 
 .sidebar-history-card:hover {
-    border-color: rgba(99, 102, 241, 0.4);
-    background: #18223a;
+    border-color: rgba(99, 102, 241, 0.35);
+    background: #f5f3ff;
 }
 
 .history-title {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: #f1f5f9;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
     line-height: 1.35;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .history-meta {
-    font-size: 0.76rem;
-    color: #94a3b8;
+    font-size: 0.74rem;
+    color: #64748b;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
-/* Main Container Proportions */
+/* Main Container — narrower & focused */
 .main .block-container {
-    max-width: 900px;
-    padding-top: 24px;
+    max-width: 720px;
+    padding-top: 40px;
     padding-bottom: 60px;
+    padding-left: 2rem;
+    padding-right: 2rem;
     margin: 0 auto;
 }
 
-/* Hero Section Card */
-.hero-header-card {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    border-radius: 18px;
-    padding: 24px 30px;
+/* ── Ideogram-Style Hero Section ── */
+.hero-section {
+    padding: 28px 0 24px 0;
     margin-bottom: 24px;
-    box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    gap: 20px;
 }
 
-.hero-logo-container {
-    flex-shrink: 0;
-    width: 80px;
-    height: 80px;
-    border-radius: 16px;
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 25px rgba(99, 102, 241, 0.3);
-    overflow: hidden;
-}
-
-.hero-logo-container img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 16px;
-}
-
-.hero-text-container {
-    flex-grow: 1;
+.hero-eyebrow {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 14px;
 }
 
 .hero-title {
-    margin: 0;
-    font-size: 1.95rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #ffffff, #c7d2fe, #818cf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.02em;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif !important;
+    font-size: 3.3rem !important;
+    font-weight: 500 !important;
+    color: #111827 !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.025em !important;
+    margin: 0 0 16px 0 !important;
 }
 
 .hero-subtitle {
-    margin: 4px 0 0 0;
-    color: #94a3b8;
-    font-size: 0.93rem;
-    line-height: 1.45;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-size: 1.05rem !important;
+    color: #475569 !important;
+    line-height: 1.62 !important;
+    margin: 0 0 18px 0 !important;
+    max-width: 600px;
+    font-weight: 400;
 }
 
-.hero-status-pill {
+.hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.hero-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 24px;
+    background: #18181b !important;
+    color: #ffffff !important;
+    border-radius: 9999px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.hero-cta-btn:hover {
+    background: #27272a !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.hero-status {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 10px;
-    border-radius: 9999px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    margin-top: 8px;
+    font-size: 0.82rem;
+    color: #64748b;
 }
 
-.status-online {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.status-offline {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-/* Agent Execution Cards */
+/* ── Agent Execution Cards ── */
 .agent-card {
-    background: #161e2e;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
     border-radius: 12px;
-    padding: 14px 16px;
+    padding: 16px 18px;
     transition: all 0.3s ease;
     margin-bottom: 12px;
     min-height: 85px;
+    color: #1e293b;
+}
+
+.agent-card b {
+    color: #1e293b;
 }
 
 .agent-card.active {
     border-color: #6366f1;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(15, 23, 42, 0.9));
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
-    animation: pulse-border 1.8s infinite ease-in-out;
+    background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, #ffffff 100%);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.10), 0 4px 16px rgba(99,102,241,0.12);
+    animation: pulse-border-light 1.8s infinite ease-in-out;
 }
 
 .agent-card.completed {
-    border-color: #10b981;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.9));
+    border-color: #059669;
+    background: linear-gradient(135deg, rgba(5,150,105,0.05) 0%, #ffffff 100%);
 }
 
-@keyframes pulse-border {
-    0% { border-color: rgba(99, 102, 241, 0.4); }
-    50% { border-color: rgba(99, 102, 241, 1); box-shadow: 0 0 25px rgba(99, 102, 241, 0.5); }
-    100% { border-color: rgba(99, 102, 241, 0.4); }
+@keyframes pulse-border-light {
+    0%   { box-shadow: 0 0 0 2px rgba(99,102,241,0.12), 0 4px 16px rgba(99,102,241,0.08); }
+    50%  { box-shadow: 0 0 0 4px rgba(99,102,241,0.25), 0 6px 22px rgba(99,102,241,0.18); }
+    100% { box-shadow: 0 0 0 2px rgba(99,102,241,0.12), 0 4px 16px rgba(99,102,241,0.08); }
 }
 
 /* Terminal Log Viewport */
 .terminal-window {
-    background-color: #090d16;
-    border: 1px solid #1e293b;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
     border-radius: 10px;
     padding: 16px 20px;
     font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-    font-size: 0.86rem;
-    color: #38bdf8;
+    font-size: 0.84rem;
+    color: #3730a3;
     height: 220px;
     overflow-y: auto;
     margin-top: 14px;
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.6);
 }
 
 .terminal-line {
     margin-bottom: 6px;
-    line-height: 1.45;
+    line-height: 1.5;
 }
 
 .terminal-time {
-    color: #64748b;
+    color: #94a3b8;
     margin-right: 8px;
+    font-weight: 500;
 }
 
 /* Insight Callout Box */
 .insight-box {
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(99, 102, 241, 0.12));
-    border-left: 4px solid #06b6d4;
+    background: #f0f9ff;
+    border-left: 3px solid #6366f1;
     border-radius: 8px;
     padding: 12px 16px;
     margin: 14px 0;
-    font-size: 0.92rem;
-    color: #cbd5e1;
+    font-size: 0.90rem;
+    color: #374151;
+}
+
+/* Form Card Wrapper — clean border, no shadow */
+.form-card-wrapper {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 28px 28px 20px 28px;
+    margin-top: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.form-card-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #7c3aed, #0891b2);
+    border-radius: 16px 16px 0 0;
+}
+
+/* Generate Button Click Animation */
+[data-testid="stFormSubmitButton"] button,
+[data-testid="stFormSubmitButton"] button:focus {
+    transition: all 0.18s cubic-bezier(0.4,0,0.2,1) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+[data-testid="stFormSubmitButton"] button:active {
+    transform: scale(0.97) translateY(1px) !important;
+    filter: brightness(0.93);
+}
+
+[data-testid="stFormSubmitButton"] button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.3) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+[data-testid="stFormSubmitButton"] button:active::after {
+    opacity: 1;
+    animation: btn-ripple 0.4s ease-out forwards;
+}
+
+@keyframes btn-ripple {
+    0%   { transform: scale(0.5); opacity: 0.6; }
+    100% { transform: scale(2.5); opacity: 0; }
 }
 </style>
 """
