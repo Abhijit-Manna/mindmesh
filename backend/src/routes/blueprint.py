@@ -4,6 +4,7 @@ from pathlib import Path
 import uuid
 from src.crew import create_crew
 from src.utils.output_file import save_output
+from src.utils.html_converter import markdown_to_html
 
 router = APIRouter(prefix="/api/v1/blueprints", tags=["Blueprints"])
 
@@ -29,7 +30,7 @@ async def list_blueprints():
 
     # Gather all file stems except the fallback 'final_output'
     run_ids = [
-        file.stem for file in outputs_dir.glob("*.md") if file.stem != "final_output"
+        file.stem for file in outputs_dir.glob("*.html") if file.stem != "final_output"
     ]
 
     return {"total": len(run_ids), "run_ids": run_ids}
@@ -49,12 +50,12 @@ async def create_blueprint(payload: BlueprintRequest):
 
         result = await crew.kickoff_async()
         markdown_content = result.raw if hasattr(result, "raw") else str(result)
-        filename=f"{run_id}.md"
-        save_output(filename, markdown_content)
+        html_content = markdown_to_html(markdown_content)
+        filename = f"{run_id}.html"
+        save_output(filename, html_content)
+        save_output("final_output.html", html_content)
 
-        save_output("final_output.md", markdown_content)
-
-        return {"run_id": run_id, "status": "completed", "file_saved": f"output/{filename}" ,"result": str(result)}
+        return {"run_id": run_id, "status": "completed", "file_saved": f"outputs/{filename}" ,"result": html_content}
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -64,7 +65,7 @@ async def create_blueprint(payload: BlueprintRequest):
 
 @router.get("/{run_id}", status_code=200)
 async def get_blueprint(run_id: str):
-    file_path = Path("outputs") / f"{run_id}.md"
+    file_path = Path("outputs") / f"{run_id}.html"
 
     # Check if the output file actually exists
     if not file_path.exists():
@@ -73,7 +74,7 @@ async def get_blueprint(run_id: str):
             detail=f"Blueprint output for run_id '{run_id}' not found."
         )
 
-    # Read and return the saved markdown content
+    # Read and return the saved HTML content
     content = file_path.read_text(encoding="utf-8")
 
     return {
@@ -89,10 +90,10 @@ async def delete_blueprint(run_id: str):
     if run_id == "final_output":
         raise HTTPException(
             status_code=400,
-            detail="Cannot delete the global fallback 'final_output.md'.",
+            detail="Cannot delete the global fallback 'final_output.html'.",
         )
 
-    file_path = Path("outputs") / f"{run_id}.md"
+    file_path = Path("outputs") / f"{run_id}.html"
 
     if not file_path.exists():
         raise HTTPException(
@@ -102,7 +103,7 @@ async def delete_blueprint(run_id: str):
 
     file_path.unlink()
 
-    return {"run_id": run_id, "status": "deleted", "message": f"Successfully deleted outputs/{run_id}.md"}
+    return {"run_id": run_id, "status": "deleted", "message": f"Successfully deleted outputs/{run_id}.html"}
 
 
 #@router.post("/{run_id}/regenerate", status_code=201)
