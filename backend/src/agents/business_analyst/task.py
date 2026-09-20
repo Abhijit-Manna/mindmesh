@@ -1,5 +1,5 @@
 from crewai import Task
-
+from typing import Optional
 from .agent import create_business_analyst
 
 
@@ -10,6 +10,7 @@ def create_business_analyst_task(
     expected_daily_traffic: str,
     delivery_timeline_months: int,
     data_hosting_country: str,
+    relevant_experience: Optional[str] = None,
 ) -> Task:
     agent = create_business_analyst()
 
@@ -25,6 +26,16 @@ Cloud Preference: {cloud_preference}
 Expected Daily Traffic: {expected_daily_traffic}
 Delivery Timeline: {delivery_timeline_months} months
 Data Hosting Country: {data_hosting_country}
+
+================ RELEVANT PAST EXPERIENCE ================
+
+{relevant_experience or "No relevant previous experience is available."}
+
+Use this previous experience only as reference material.
+Do not blindly copy previous decisions.
+The current user's requirements and constraints always take priority.
+If previous experience conflicts with the current requirements, follow
+the current requirements and explain the appropriate reasoning.
 
 ================ DELIVERABLES REQUIRED ================
 1. Executive Problem Definition & Value Proposition

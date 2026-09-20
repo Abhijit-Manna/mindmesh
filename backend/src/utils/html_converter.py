@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import os
 import markdown
+import shutil
 
 
 def remove_emojis(text: str) -> str:
@@ -59,11 +60,14 @@ def mermaid_to_svg(mermaid_code: str) -> str | None:
 
             with open(input_path, "w", encoding="utf-8") as f:
                 f.write(mermaid_code)
-
+            npx_path = shutil.which("npx")
+            if not npx_path:
+                print("[html_converter] npx not found; using Mermaid.js client-side fallback.")
+                return None
             result = subprocess.run(
                 [
-                    "npx", "-y", "@mermaid-js/mermaid-cli",
-                    "mmdc",
+                    npx_path, 
+                    "-y", "@mermaid-js/mermaid-cli",
                     "-i", input_path,
                     "-o", output_path,
                     "--backgroundColor", "white",

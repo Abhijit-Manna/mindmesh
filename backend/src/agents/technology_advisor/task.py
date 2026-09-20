@@ -1,5 +1,5 @@
 from crewai import Task
-
+from typing import Optional
 from .agent import create_technology_advisor
 
 
@@ -11,6 +11,7 @@ def create_technology_advisor_task(
     data_hosting_country: str,
     ba_task: Task,
     sa_task: Task,
+    relevant_experience: Optional[str] = None,
 ) -> Task:
     agent = create_technology_advisor()
 
@@ -23,6 +24,23 @@ Cloud Infrastructure Preference: {cloud_preference}
 Expected Daily Traffic: {expected_daily_traffic}
 Delivery Timeline: {delivery_timeline_months} months
 Data Hosting Country / Region: {data_hosting_country}
+
+================ RELEVANT PAST EXPERIENCE ================
+
+{relevant_experience or "No relevant previous experience is available."}
+
+Use previous experiences as reference when evaluating technology
+choices and trade-offs.
+
+Do not blindly copy previous technology decisions.
+The current user's constraints, the Business Analyst requirements,
+and the Solution Architect's design take priority.
+
+If a previous experience conflicts with the current project,
+discard that experience and reason from the current requirements.
+
+Pay particular attention to previously successful technology choices,
+rejected alternatives, evaluator feedback, and lessons learned.
 
 ================ DELIVERABLES REQUIRED ================
 1. Authoritative Recommended Technology Stack Matrix (Layer, Technology, Version, Rationale)

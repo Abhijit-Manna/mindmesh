@@ -27,8 +27,11 @@ def parse_evaluation_json(eval_raw: str) -> Dict[str, Any]:
             "score": 0.85,
             "passed": True,
             "summary": "Output audited successfully and conforms to guidelines.",
-            "critique": [],
-            "remediation_guidance": "None",
+            "critique": [
+            "The evaluator response was not valid JSON."
+            ],
+            "remediation_guidance": (
+            "Re-run the evaluation and return only the required JSON format."),
         }
 
 

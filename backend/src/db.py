@@ -38,6 +38,65 @@ def init_db():
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_run_id ON blueprints(run_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON blueprints(created_at DESC)")
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS experiences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                run_id TEXT NOT NULL,
+
+                agent_name TEXT NOT NULL,
+
+                experience_type TEXT NOT NULL,
+
+                business_idea TEXT,
+                technology_preference TEXT,
+                cloud_preference TEXT,
+                expected_daily_traffic TEXT,
+                delivery_timeline_months INTEGER,
+                data_hosting_country TEXT,
+
+                decision TEXT,
+                reason TEXT,
+
+                evaluator_score REAL,
+                evaluator_feedback TEXT,
+
+                reusable_lesson TEXT,
+
+                successful INTEGER DEFAULT 1,
+
+                created_at TEXT NOT NULL
+            )
+        """)
+
+        # Indexes used later when retrieving relevant experiences.
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_experiences_agent "
+            "ON experiences(agent_name)"
+        )
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_experiences_type "
+            "ON experiences(experience_type)"
+        )
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_experiences_cloud "
+            "ON experiences(cloud_preference)"
+        )
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_experiences_created_at "
+            "ON experiences(created_at DESC)"
+        )
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_experiences_score "
+            "ON experiences(evaluator_score DESC)"
+        )
+
+
         conn.commit()
 
 

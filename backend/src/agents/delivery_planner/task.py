@@ -1,5 +1,5 @@
 from crewai import Task
-
+from typing import Optional
 from .agent import create_delivery_planner
 
 
@@ -8,6 +8,7 @@ def create_delivery_planner_task(
     ba_task: Task,
     sa_task: Task,
     ta_task: Task,
+    relevant_experience: Optional[str] = None,
 ) -> Task:
     agent = create_delivery_planner()
 
@@ -22,6 +23,22 @@ are provided as upstream context.
 ================ HARD CONSTRAINTS ================
 Hard Delivery Timeline: {delivery_timeline_months} months (DO NOT EXCEED).
 All MVP milestones, integration, and security testing must be completed within this window.
+
+================ RELEVANT PAST EXPERIENCE ================
+
+{relevant_experience or "No relevant previous experience is available."}
+
+Use previous delivery experiences as reference material when planning
+the current project.
+
+Do not blindly copy previous timelines, staffing models, milestones,
+or risk assumptions.
+
+The current project's delivery timeline and all upstream Business
+Analysis, Architecture, and Technology decisions take priority.
+
+Pay particular attention to previously successful delivery patterns,
+known delivery risks, evaluator feedback, and lessons learned.
 
 ================ DELIVERABLES REQUIRED ================
 1. Delivery Methodology & Governance Framework (Scrum cadence, sprint structure, definition of done)

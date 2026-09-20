@@ -39,6 +39,8 @@ YOU MUST PRODUCE:
      Client → CDN/Edge → API Gateway → Core Services → Cache → Database → External/Async Services.
    - Keep the diagram consistent with the architecture designed in the previous sections.
    - Use clear and readable node names.
+   - Quote node labels that contain parentheses, brackets, colons, slashes, hyphens, or other special characters.
+   - Example: use `Redis["Redis (In-Memory Cache)"]` instead of `Redis[Redis (In-Memory Cache)]`.
    - Do NOT generate ASCII art.
    - Do NOT generate an image.
    - For this section, output valid Mermaid code.

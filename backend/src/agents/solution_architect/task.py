@@ -1,5 +1,5 @@
 from crewai import Task
-
+from typing import Optional
 from .agent import create_solution_architect
 
 
@@ -10,6 +10,7 @@ def create_solution_architect_task(
     delivery_timeline_months: int,
     data_hosting_country: str,
     ba_task: Task,
+    relevant_experience: Optional[str] = None,
 ) -> Task:
     agent = create_solution_architect()
 
@@ -23,6 +24,17 @@ Expected Daily Traffic: {expected_daily_traffic}
 Delivery Timeline: {delivery_timeline_months} months
 Data Hosting Country / Region: {data_hosting_country}
 
+================ RELEVANT PAST EXPERIENCE ================
+
+{relevant_experience or "No relevant previous experience is available."}
+
+Use these previous experiences as reference material for architectural
+reasoning. Do not blindly copy a previous architecture.
+
+The current user's requirements and constraints always take priority.
+If a previous experience conflicts with the Business Analyst requirements
+or current user constraints, do not follow it.
+
 ================ DELIVERABLES REQUIRED ================
 1. Architectural Style & Design Rationale (Modular Monolith / Microservices / Event-Driven)
 2. Core Component Topology & Responsibility Matrix (Table format)
@@ -35,7 +47,10 @@ Data Hosting Country / Region: {data_hosting_country}
    - Start with `flowchart TD`.
    - Show the major components and their connections.
    - Show important request/data flows.
-   - Keep the diagram consistent with the architecture.
+      - Keep the diagram consistent with the architecture.
+   - Revalidate every Mermaid node and connection yourself; do not copy Mermaid syntax from past experiences without checking it.
+   - Quote node labels that contain parentheses, brackets, colons, slashes, hyphens, or other special characters.
+   - Example: use `Redis["Redis (In-Memory Cache)"]` instead of `Redis[Redis (In-Memory Cache)]`.
    - Do NOT generate ASCII art.
    - Do NOT generate an image.
    - Return valid Mermaid syntax for this section.
