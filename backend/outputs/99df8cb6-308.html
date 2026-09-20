@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
-    
+
+    <!-- Mermaid.js: client-side fallback for any diagram that could not be pre-rendered -->
     <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
 
@@ -221,6 +221,22 @@
             border: none;
             border-top: 1px solid var(--border);
             margin: 32px 0;
+        }
+
+        /* Architecture Diagram — pre-rendered SVG wrapper */
+        .architecture-diagram {
+            overflow-x: auto;
+            margin: 24px 0;
+            padding: 16px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .architecture-diagram svg {
+            max-width: 100%;
+            height: auto;
         }
 
         /* Footer */
