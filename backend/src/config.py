@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY_SA: str 
     GEMINI_API_KEY_TA: str 
     GEMINI_API_KEY_DP: str 
-    GEMINI_API_KEY_DO: str | None = None
-    GEMINI_API_KEY_RW: str | None = None
-    GEMINI_API_KEY_EV: str | None = None
+    GEMINI_API_KEY_DO: str 
+    GEMINI_API_KEY_RW: str 
+    GEMINI_API_KEY_EV: str 
     GEMINI_MODEL: str
     EVALUATION_MODEL: str
 
