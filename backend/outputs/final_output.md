@@ -1,501 +1,493 @@
 # MindMesh AI — Enterprise Solution Blueprint
 
-> **System Blueprint ID:** `f63afe94-713`  
-> **Generation Timestamp:** `2026-09-20 09:56:09 UTC`  
-> **Target Cloud:** `Azure` | **Tech Stack:** `Enterprise Stack `  
-> **Expected Scale:** `50,000 DAU (Peak 2,500 req/sec)` | **Target Timeline:** `2 Months` | **Residency:** `India`
+> **System Blueprint ID:** `23027db7-9c1`  
+> **Generation Timestamp:** `2026-09-20 11:35:39 UTC`  
+> **Target Cloud:** `AWS` | **Tech Stack:** `Enterprise Stack `  
+> **Expected Scale:** `50,000 DAU (Peak 2,500 req/sec)` | **Target Timeline:** `5 Months` | **Residency:** `India`
 
 ---
 
 ## Executive Problem Scope & Objectives
 **Business Idea / Problem Statement:**
-Online Bar store for adults
+An end-to-end B2B supply chain visibility platform with real-time GPS fleet tracking, cold-chain temperature telemetry sensors, route optimization algorithms, dynamic warehouse inventory forecasting, and automated driver dispatch management.
 
 ---
 
 ## Executive Architecture Synthesis & System Topology
 *Synthesized by Lead Solution Consultant & Technical Writer*
 
-# Enterprise Architecture Blueprint: "Spirits & Spirits" E-Commerce Ecosystem
+# Enterprise Solution Blueprint: SupplyChain-X (SCX) Platform
 **Prepared by:** Office of the Chief Enterprise Architect, MindMesh AI  
-**Subject:** Executive Synthesis and Governance for Scalable Online Liquor Retail  
+**Subject:** Executive Architecture Synthesis & Governance Review
 
 ---
 
 ### 1. Executive Solution Overview & Strategic Business Value
-
-The "Spirits & Spirits" initiative addresses the high-velocity, high-compliance requirements of the digital liquor retail market. By leveraging a micro-frontends architecture and a cloud-native backend, we transform a logistical challenge into a competitive advantage. 
+The SCX Platform represents a mission-critical digital transformation for B2B supply chain logistics. By integrating IoT telemetry (GPS/Cold-chain) with predictive inventory analytics, SCX transitions logistics from a reactive operational expense to a proactive competitive advantage.
 
 **Strategic Alignment Matrix:**
 
-| Business Objective | Architectural Solution | Strategic Impact |
+| Business Objective | Architectural Solution Component | Strategic Benefit |
 | :--- | :--- | :--- |
-| **High Concurrency (2,500 req/s)** | Azure Kubernetes Service (AKS) + Redis | Sub-100ms latency for inventory lookups. |
-| **Compliance (India Regulations)** | Azure India Central/South Regions + HSM | Full alignment with DPDP Act and excise mandates. |
-| **Rapid Market Entry (2 Months)** | Modular Microservices & CI/CD Pipeline | Parallel dev/ops velocity; MVP launch in 8 weeks. |
-| **Operational Excellence** | Managed PaaS (Azure SQL, Cosmos DB) | Reduced toil, 99.99% availability. |
+| **Real-time Visibility** | Event-Driven IoT Ingestion Pipeline | Near-zero latency situational awareness. |
+| **Operational Efficiency** | Route Optimization Engine (OR-Tools) | Reduced fuel/transit costs (15-20% avg). |
+| **Inventory Accuracy** | Predictive ML-driven Forecasting | Minimized stockouts & optimized safety stock. |
+| **Reliability/Scale** | Serverless-First Microservices (AWS) | Elastic scaling to meet 2.5k req/sec peaks. |
+| **Compliance** | India-Region Data Residency | Regulatory alignment with DPDP/IT Act. |
 
 ---
 
 ### 2. Comprehensive System Architecture Topology
 
 ```text
-[ CLIENT LAYER ]      [ EDGE & SECURITY ]           [ APP & MICROSERVICES ]         [ DATA & PERSISTENCE ]
-      |                      |                                |                              |
-[ Web / Mobile ] --> [ Azure Front Door / WAF ] --> [ API Gateway (Ocelot/Envoy) ] --> [ Service Mesh (Istio) ]
-      |              (DDoS Protection)                |              |                    |
-                                                      |      [ Auth Service ]             |
-                                                      |      [ Order Service ]            |
-                                                      |      [ Inventory Service ]        |
-                                                      |      [ Payment Service ]          |
-                                                      |                                   |
-[ EXT. INTEGRATIONS ] <-------------------------------|----------[ Message Bus (Azure Service Bus) ]
-(Payment Gateways,                                    |                                   |
- Logistics/Delivery API)                              |          [ Redis Cache ] <--------+
-                                                      |          [ Azure SQL / Cosmos ] <-+
-                                                      |          [ Blob Storage (Assets) ]
+[ CLIENT LAYER ]       [ EDGE & SECURITY ]          [ APP & MICROSERVICES ]         [ DATA & INTEGRATION ]
+      |                         |                             |                              |
+[ Web / Mobile ] <---> [ Route 53 / CloudFront ] <---> [ API Gateway (WAF) ] <---> [ Redis (Cache/Session) ]
+      |                         |                             |                              |
+[ IoT Sensors ]  <---> [ AWS IoT Core / MQTT ] <---> [ Event Bus (EventBridge) ] <--> [ SQS / SNS Queue ]
+      |                         |                             |                              |
+[ External APIs ] <---> [ Shield Advanced ]  <---> [ EKS / Fargate Clusters ]  <--> [ Aurora PostgreSQL ]
+                                |                             |                              |
+                                |                    [ Background Workers ]   <---> [ S3 (Data Lake/Logs)]
+                                |                             |                              |
+                                |                    [ Third-Party Integrations ] <---> [ KMS / CloudHSM ]
 ```
 
 ---
 
 ### 3. Cross-Discipline Technical Consistency & Harmonization Audit
-
-As Chief Architect, I have performed a verification audit to ensure the alignment between the Tech Stack and Delivery Roadmap:
-
-*   **API Protocol Consistency:** All services communicate via gRPC (internal) and REST/OpenAPI 3.0 (external). This ensures type safety and performance under the requested 2,500 req/sec load.
-*   **Deployment Sync:** The 2-month timeline mandates "Infrastructure as Code" (Terraform). The consistency check confirms that the environment configuration (Dev/Stage/Prod) is identical to the target Azure India regions, preventing "works on my machine" bottlenecks.
-*   **Data Model Integration:** The schema defined by the Solution Architect (Relational for Transactions, Document for Catalog) is strictly mapped to the chosen Azure SQL and Cosmos DB instances to ensure ACID compliance during checkout.
+*   **Protocol Alignment:** We have standardized on **gRPC** for internal microservice communication to minimize overhead, and **REST/JSON** for public-facing API Gateway endpoints.
+*   **State Management:** The architecture enforces a strict separation between transient state (Redis) and the Source of Truth (Aurora PostgreSQL), preventing race conditions in dispatch logic.
+*   **Delivery Integration:** The 5-month timeline is reconciled with this architecture via a phased rollout:
+    *   *Month 1-2:* IoT ingestion and baseline dispatch (Foundation).
+    *   *Month 3-4:* Predictive analytics and Route Optimization (Advanced logic).
+    *   *Month 5:* Security hardening and Load/Penetration testing.
 
 ---
 
 ### 4. Data Residency, Security & Regulatory Compliance (India)
+Given the hosting requirements in the **AWS Asia Pacific (Mumbai) Region (`ap-south-1`)**:
 
-Operating in the Indian market for liquor retail requires strict adherence to state-specific excise regulations and national data privacy (DPDP Act).
-
-*   **Residency:** All primary and read-replica databases are pinned to `centralindia` and `southindia` Azure regions. No PII (Personally Identifiable Information) crosses sovereign boundaries.
-*   **Cryptographic Isolation:** 
-    *   **At-Rest:** Azure Key Vault (FIPS 140-2 Level 2) manages CMK (Customer Managed Keys).
-    *   **In-Transit:** TLS 1.3 mandated across all ingress/egress points.
-*   **Regulatory Audit:** The architecture includes an immutable Audit Log microservice that captures every transaction event for regulatory reporting to state excise departments.
+*   **Sovereignty:** All data, including persistent storage and backups, is strictly pinned to the Mumbai region via Service Control Policies (SCPs).
+*   **Compliance:** The architecture incorporates encryption-at-rest using AWS KMS (Customer Managed Keys) to satisfy the **Digital Personal Data Protection (DPDP) Act** requirements.
+*   **Isolation:** The network topology utilizes **Private Subnets** for all database instances and worker nodes. Traffic is only permitted via NAT Gateways and strictly governed by Security Groups, ensuring no public ingress to data storage.
+*   **Auditability:** AWS CloudTrail and Config are enabled to provide a continuous compliance audit trail for SOC 2 and local regulatory reporting.
 
 ---
 
-### 5. TCO & Cloud Sizing Recommendations
+### 5. Total Cost of Ownership (TCO) & Sizing Considerations
 
-To optimize for the 50,000 DAU target while maintaining a strict 2-month rollout, I propose the following cost-efficiency strategy:
+#### Infrastructure Sizing (MVP Level):
+*   **Compute:** 3-5 Large Fargate tasks for main API services; 10-20 smaller task-definitions for asynchronous background workers (Route/Dispatch calculations).
+*   **Storage:** Aurora PostgreSQL (Serverless v2) to accommodate the fluctuating load of 50,000 DAU, ensuring we only pay for the capacity consumed during peak transit hours.
+*   **Optimization Strategies:**
+    1.  **Tiered Storage:** Move historical telemetry data older than 90 days from Aurora to S3 Glacier via Lifecycle Policies to reduce DB costs by ~60%.
+    2.  **Savings Plans:** Commit to 1-year compute savings plans for baseline Fargate usage to achieve ~30% cost efficiency.
+    3.  **Graviton Adoption:** Utilize `arm64` (Graviton) processors for all containerized workloads to improve price-performance by up to 40% over x86.
 
-1.  **Compute:** Utilize **Azure Kubernetes Service (AKS)** with Cluster Autoscaler. Baseline: 3 nodes (D4s_v5); Scale: up to 12 nodes during peak evening hours (19:00 - 23:00 IST).
-2.  **Database:** **Azure SQL Database (Serverless Tier)** to handle unpredictable transactional bursts while auto-scaling to zero or lower vCores during night-time inactivity, saving ~35% on monthly costs.
-3.  **Storage:** Tiered storage using **Azure Blob Storage (Cool tier)** for high-resolution product imagery to minimize egress/storage costs.
-4.  **CDN:** Azure Front Door Premium to consolidate WAF, CDN, and Load Balancing into a single consumption model, reducing management overhead by 20%.
-
-**Day-2 Operational Strategy:**
-*   **Observability:** Implement **Azure Monitor & App Insights** with custom dashboards for "Inventory-to-Sales" conversion ratios.
-*   **Maintenance:** Adopt a Blue-Green deployment strategy via Azure DevOps to ensure zero-downtime releases during the high-traffic post-launch phase.
+#### Day-2 Operations Recommendations:
+*   **Observability:** Implement OpenTelemetry with AWS X-Ray for distributed tracing to identify bottlenecks in the dispatch-to-sensor pipeline.
+*   **Chaos Engineering:** Periodically test regional resiliency by simulating failovers between `ap-south-1a` and `ap-south-1b` availability zones.
+*   **Automated Governance:** Utilize Infrastructure-as-Code (Terraform) with a strict CI/CD pipeline integrated into the build process to prevent "configuration drift."
 
 ---
-**Approval:**
-*This blueprint is formally validated for implementation. The technical stack remains anchored in Azure-native services to maximize ecosystem synergy and minimize the delivery risk profile.*
+
+**Final Approval:**
+*Lead Solution Consultant & Chief Enterprise Architect, MindMesh AI*
 
 ---
 
 ## Section 1: Business Analysis & Functional Requirements
 *Synthesized by Business Analyst Agent*
 
-# Business Analysis & Requirements Specification: "LiquidRetail" (Internal Project Name)
+# Business Requirements Specification: Supply Chain Visibility Platform (SCVP)
 
-## 1. Executive Problem Definition & Business Context
-
-**Problem Statement:** The premium beverage market in India is characterized by fragmented local retail and inconsistent online availability. Consumers face difficulties in sourcing genuine, high-quality alcoholic beverages, while legitimate retailers struggle with digital transformation, inventory visibility, and compliance with the complex Indian excise and liquor regulatory framework.
-
-**Value Proposition:** "LiquidRetail" provides a centralized, compliant, and intuitive digital marketplace connecting licensed retailers with adult consumers. The platform ensures end-to-end identity verification, regulatory adherence, and a seamless shopping experience for premium beverages.
-
-**Success Metrics (KPIs):**
-*   **Customer Acquisition Cost (CAC) vs. Lifetime Value (LTV):** Target ratio > 3:1.
-*   **Compliance Audit Score:** 100% pass rate for digital age/identity verification and state-mandated excise reporting.
-*   **Conversion Rate:** Achieve a baseline of 2.5% for unique daily visitors.
-*   **Operational Availability:** 99.95% uptime during high-traffic promotional periods.
+**Project:** MindMesh AI - End-to-End Supply Chain Visibility Platform
+**Version:** 1.0
+**Date:** October 26, 2023
+**Status:** Requirements Baseline (Pre-Implementation)
 
 ---
 
-## 2. Stakeholder & Persona Analysis
+## 1. Executive Problem Definition & Business Context
+
+### Problem Breakdown
+Modern supply chains are fragmented, characterized by "black holes" in transit visibility, poor cold-chain compliance, and reactive inventory management. The lack of synchronized data between fleet operations and warehouse management leads to:
+*   **High Spoilage:** Lack of real-time temperature telemetry in transit.
+*   **Operational Inefficiency:** Manual dispatching and sub-optimal routing increasing fuel/labor costs.
+*   **Bullwhip Effect:** Delayed inventory forecasting leading to stockouts or overstocking at the warehouse level.
+
+### Value Proposition
+MindMesh AI will provide a unified "Single Pane of Glass" for logistics visibility. By integrating GPS and IoT telemetry with dynamic inventory forecasting, the platform enables proactive issue resolution, automated compliance reporting, and predictive capacity planning.
+
+### Success Metrics (KPIs)
+*   **Reduction in Spoilage:** Target 15% reduction in cold-chain shrinkage within 6 months.
+*   **Dispatch Efficiency:** Improve fleet utilization by 20% through automated routing.
+*   **Visibility Latency:** Ensure 95% of sensor data is reflected in the dashboard within <10 seconds.
+*   **Platform Uptime:** Maintain 99.9% operational availability.
+
+---
+
+## 2. Stakeholder & User Persona Profiles
 
 | Persona / Role | Objectives & Needs | Pain Points | Primary System Interactions |
 | :--- | :--- | :--- | :--- |
-| **End Consumer** | Easy discovery, product authenticity, fast/safe delivery. | Fake products, complex search, delivery delays. | Search, Cart, Checkout, Age Verification. |
-| **Licensed Retailer** | Digital inventory management, increased sales, excise compliance. | Manual reporting, low footfall, inventory mismatches. | Dashboard, Inventory Updates, Order Fulfillment. |
-| **Compliance Officer** | Automated excise reporting, real-time age verification, audit logs. | Regulatory fines, manual documentation, data leaks. | Audit Trails, Reporting, User Verification logs. |
-| **Operations Manager** | System stability, logistics efficiency, high-volume order processing. | Downtime, bottlenecks, inefficient delivery routing. | Analytics, Support, System Monitoring. |
+| **Fleet Manager** | Optimize route efficiency and ensure fleet uptime. | Manual dispatch errors, lack of visibility into driver behavior. | Dashboard, Dispatch Module, Analytics. |
+| **Warehouse Manager** | Maintain optimal inventory levels and compliance. | Stock-outs, sudden demand spikes, lack of inbound arrival data. | Inventory Forecast, ASN Tracking. |
+| **Quality/Compliance Officer** | Ensure cold-chain integrity and regulatory compliance. | Regulatory audit failures, data gaps in temperature logs. | Alert Logs, Audit Reports. |
+| **Driver** | Efficient routing and simple load management. | Traffic congestion, manual reporting overhead, complex interfaces. | Mobile App (Route view, Proof of Delivery). |
 
 ---
 
 ## 3. Exhaustive Functional Requirements (FR) Matrix
 
-| ID | Capability | Description | MoSCoW | Acceptance Criteria |
+| ID | Capability | Description & User Story | MoSCoW | Acceptance Criteria |
 | :--- | :--- | :--- | :--- | :--- |
-| FR01 | Identity Verification | Multi-stage age verification (Govt ID OCR + Liveness check). | Must | 0% under-age access allowed. Success in < 15s. |
-| FR02 | Geo-fencing | Restrict access/ordering based on state/city liquor laws. | Must | IP/Address validation against operational zones. |
-| FR03 | Product Catalog | Structured search/filtering (brand, type, ABV, price). | Must | Results returned within 500ms; filters work correctly. |
-| FR04 | Inventory Sync | Real-time updates on stock levels per retail partner. | Must | Stock-out triggers automatic product removal. |
-| FR05 | Secure Checkout | PCI-compliant payment gateway integration. | Must | Successful transaction completion flow. |
-| FR06 | Excise Reporting | Automated generation of state-specific excise forms. | Must | Audit-ready reports exported to PDF/CSV. |
-| FR07 | Order Tracking | Real-time status updates (Order, Packed, Shipped). | Should | User receives push/SMS notification at every stage. |
-| FR08 | Personalized Recs | AI-driven suggestions based on purchase history. | Could | CTR lift of 5% in product page views. |
-| FR09 | Loyalty Program | Point-based system for repeat purchasers. | Could | Points calculation logic accurate per purchase. |
-| FR10 | User Ratings | Community feedback on products/retailers. | Could | Moderation workflow for comments exists. |
-| FR11 | Bulk Order Mgmt | Enterprise-grade order queue handling for peak traffic. | Must | No data loss during 2,500 req/sec spikes. |
-| FR12 | Refund/Returns | Automated reverse logistics request flow. | Should | Refund status synced with payment provider. |
+| FR01 | Real-time GPS Tracking | As a Fleet Manager, I want to view all vehicles on a map so I can monitor progress. | Must | Updates every <30s; accuracy within 5m. |
+| FR02 | Telemetry Alerts | As a Quality Officer, I need automated alerts if cold-chain temps exceed thresholds. | Must | SMS/Email alert sent within 10s of breach. |
+| FR03 | Route Optimization | As a Fleet Manager, I want AI-driven routes to minimize transit time/fuel. | Must | Routes suggest 10% lower fuel/time consumption. |
+| FR04 | Inventory Forecasting | As a WH Manager, I need to predict stock needs based on inbound movement. | Should | Forecasting engine updates daily. |
+| FR05 | Automated Dispatch | As a Fleet Manager, I want to assign loads based on driver proximity/availability. | Must | Manual override enabled; auto-assign function. |
+| FR06 | Proof of Delivery | As a Driver, I need to capture digital signatures/photos of delivery. | Must | Offline capture with auto-sync on connection. |
+| FR07 | Audit Trails | As a Compliance Officer, I need immutable logs of all temperature data. | Must | Data exportable in PDF/CSV format. |
+| FR08 | Fleet Maintenance Mgmt | As a Fleet Manager, I want to track vehicle service intervals. | Could | Threshold alerts for upcoming maintenance. |
+| FR09 | Predictive Maintenance | As a Fleet Manager, I want to predict component failure via IoT telemetry. | Could | Alert triggered before failure. |
+| FR10 | Vendor/Supplier Portal | As a Vendor, I want to submit Advance Shipping Notices (ASN). | Should | Web-based portal for data entry. |
+| FR11 | API Integration | As an Enterprise User, I want to push data to internal ERPs. | Should | Secure RESTful data endpoints. |
+| FR12 | Incident Reporting | As a Driver, I want to report transit delays or vehicle issues. | Must | Simple trigger button for status change. |
 
 ---
 
-## 4. Non-Functional Requirements (NFR)
+## 4. Non-Functional Requirements (NFR Specifications)
 
-*   **Performance:** 
-    *   **P99 Latency:** < 300ms for API response; < 2s for full page load.
-    *   **Throughput:** Handle 2,500 requests/second sustained, with a 3x buffer for seasonal demand spikes.
+*   **Performance:**
+    *   **P99 Latency:** <200ms for API response; <2s for map dashboard render.
+    *   **Throughput:** Handle 2,500 req/sec peak.
 *   **Scalability & Availability:**
-    *   **SLA:** 99.95% uptime annually.
-    *   **Scaling:** Horizontal auto-scaling triggered at 60% CPU/Memory utilization.
+    *   **SLA:** 99.95% Availability.
+    *   **Scaling:** Horizontal auto-scaling triggers based on CPU/Memory thresholds (e.g., >70% utilization).
 *   **Security & Compliance:**
-    *   **Authentication:** Multi-factor authentication (MFA) for administrative roles.
-    *   **Encryption:** AES-256 for data at rest; TLS 1.3 for data in transit.
-    *   **GDPR/DPDP Act:** Full compliance with India’s Digital Personal Data Protection Act (storage, processing, and right-to-be-forgotten implementation).
-*   **Data Residency:** 
-    *   All user PII and transaction records must be stored within **India (Azure India Central/South regions)** to satisfy excise and sovereign data laws.
+    *   **Encryption:** AES-256 for at-rest data; TLS 1.3 for in-transit.
+    *   **Standards:** ISO 27001 compliant, GDPR/DPDP Act 2023 (India) alignment.
+*   **Data Residency:**
+    *   Strict adherence to India’s data sovereignty laws; all production data, logs, and backups must reside within AWS India (Mumbai/Hyderabad) regions.
 
 ---
 
 ## 5. MVP Scope Boundary vs. Multi-Phase Roadmap
 
-*   **MVP Scope (2 Months):**
-    *   Core User Authentication & mandatory Age/ID Verification.
-    *   Geographically restricted product search.
-    *   Cart & Checkout (Core payment integrations).
-    *   Basic Retailer Dashboard (Inventory management & Order acceptance).
-    *   Regulatory reporting export (Excise).
-*   **Future Evolution (Post-MVP):**
-    *   Advanced recommendation engine (ML-based).
-    *   Social features (community, gifting, user reviews).
-    *   Loyalty & Membership tiers.
-    *   Advanced analytics and predictive demand modeling for retailers.
+*   **MVP Scope (Month 1-5):**
+    *   Core GPS Tracking (FR01), Cold-chain Telemetry (FR02), Route Optimization (FR03), Driver Mobile App (FR06), and Compliance Dashboard (FR07).
+*   **Out-of-Scope (Deferred):**
+    *   Predictive Maintenance (FR09), Full Vendor Portal (FR10), and complex 3rd party ERP integrations. These are planned for Post-MVP Phase 2 (Months 6-9).
 
 ---
 
-## 6. Assumptions & Risk Register
+## 6. Assumptions, Operational Constraints & Risk Register
 
-**Assumptions:**
-*   Retailer inventory data is available via API or standardized batch upload.
-*   Third-party identity verification services are available in the target region.
-*   Client will provide dedicated legal counsel for regional excise interpretation.
+### Assumptions
+*   Hardware (GPS/IoT sensors) is pre-configured and sends standardized data payloads.
+*   Clients provide API access to their current internal inventory systems.
 
+### Risk Register
 | Risk ID | Description | Category | Severity | Likelihood | Mitigation |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| R01 | Regulatory Change | Compliance | Critical | High | Modular architecture to allow quick rule updates. |
-| R02 | Payment Gateway Latency | Performance | Medium | Medium | Implement circuit breaker pattern for external APIs. |
-| R03 | Data Privacy Breach | Security | Critical | Low | Role-based access control (RBAC) & PII masking. |
-| R04 | High Traffic Surge | Scalability | High | Medium | Load testing in staging before go-live. |
+| R01 | Inconsistent IoT sensor quality | Technical | High | Medium | Implement normalization layer for incoming data. |
+| R02 | Latency in rural areas (India) | Network | High | High | Offline-first mobile strategy; local caching. |
+| R03 | Regulatory changes (DPDP) | Legal | Critical | Low | Keep data processing localized to India region. |
 
 ---
 
 ## 7. Critical Open Discovery Questions
 
-1.  **Excise Complexity:** Are there different excise laws per state, and how many states will be supported at launch? (Scope dependency)
-2.  **Logistics:** Is delivery handled by the retailer, or is there a requirement for an integrated third-party logistics (3PL) delivery tracking API?
-3.  **Payment Processing:** Are there specific government-mandated payment rails (like UPI-only, etc.) for liquor transactions in the target states?
-4.  **Hardware:** Do retailers have existing POS systems, or does this platform need to provide a standalone POS/Stock management terminal?
+1.  What is the specific telemetry data format provided by existing fleet hardware (JSON, Protobuf, MQTT)?
+2.  Are there specific ERP systems (SAP, Oracle) that currently hold the "Master Data" for inventory?
+3.  Does the client possess existing Cloud Landing Zones, or must the infrastructure be built from scratch?
+4.  What is the user volume breakdown between "Mobile/Driver" vs. "Desktop/Manager" roles?
 
 ---
 
 ## Section 2: High-Level Solution Architecture & Component Design
 *Synthesized by Solution Architect Agent*
 
-As the Principal Solution Architect at MindMesh AI, I have architected the following blueprint to support your 50,000 DAU requirement while ensuring rapid delivery within the 2-month window.
+As the Principal Solution Architect at MindMesh AI, I have engineered the following System Architecture Blueprint. Given the 5-month delivery timeline and the traffic profile (50k DAU, 2.5k req/sec), I have prioritized **developer velocity and system reliability** by selecting a **Modular Monolith** architecture that leverages **Event-Driven capabilities** for asynchronous processing. This avoids the operational complexity of distributed microservices while remaining easily refactorable.
 
 ---
 
 ### 1. Architectural Style & Design Rationale
-**Style:** **Modular Monolith (deployed on Azure App Service / Container Apps)**
-*   **Rationale:** Microservices introduce excessive operational complexity (distributed tracing, service mesh management) that threatens a 2-month delivery timeline. A modular monolith allows us to enforce strict domain boundaries via code namespaces and internal dependency injection.
-*   **Paradigm:** 
-    *   **CQRS (Lightweight):** Separate read/write models within the application layer to optimize query performance.
-    *   **Stateless Compute:** All application servers remain stateless; state is externalized to Redis/Azure SQL.
-    *   **Event-Driven (Async):** Use Azure Service Bus to decouple long-running operations (e.g., email notifications, report generation).
+*   **Style:** Modular Monolith on AWS (ECS Fargate).
+*   **Rationale:** Microservices introduce network latency, distributed transaction complexity, and massive overhead in DevOps. A Modular Monolith allows us to keep the code organized into clear business domains (Bounded Contexts) within a single deployment unit, ensuring high performance (in-memory calls) while preparing the team to extract services later if scale requires it.
+*   **Core Principles:** 
+    *   **CQRS (Lightweight):** Separate read/write models within the application layer.
+    *   **Stateless Compute:** All session state resides in Redis; application servers are ephemeral.
+    *   **Event-Driven:** Decouple non-blocking tasks (notifications, analytics) using Amazon SNS/SQS.
 
 ---
 
 ### 2. Core Component Topology & Responsibility Matrix
 
-| Component | Role | Interaction Protocol | State Strategy |
+| Component | Role & Responsibility | Interaction | State Strategy |
 | :--- | :--- | :--- | :--- |
-| **Azure Front Door** | Global Edge, WAF, SSL Termination | HTTPS | Stateless |
-| **API Gateway (APIM)** | Rate limiting, Auth validation, Routing | HTTPS/REST | Cache (Rate Limits) |
-| **Application Layer** | Core Business Logic (Modularized) | In-process / gRPC | Stateless |
-| **Azure Service Bus** | Async Pub/Sub, Queueing | AMQP | Durable Message Broker |
-| **Azure SQL (Hyperscale)** | Transactional RDBMS | TDS (Tabular Data Stream) | ACID Compliant |
-| **Azure Redis** | Session state, Query result caching | RESP | Ephemeral Cache |
+| **API Gateway** | Auth, Rate Limiting, Request Routing | HTTPS/REST | Stateless |
+| **App Services** | Business logic (Bounded Contexts) | Internal DI | Stateless |
+| **ElastiCache (Redis)** | Session store, hot data, rate-limit state | TCP | In-Memory (LRU) |
+| **RDS (PostgreSQL)** | Transactional RDBMS (Multi-AZ) | SQL/JDBC | ACID |
+| **Amazon SQS** | Asynchronous task queue | Polling/Push | Ephemeral/Persistent |
+| **S3** | Secure Blob/Document storage | SDK/HTTPS | Immutable/At-rest |
 
 ---
 
 ### 3. End-to-End Data Flow
-*   **Synchronous Path (e.g., User Login/Write):**
-    1. Client -> Front Door -> APIM (Token validation) -> App Core -> Azure SQL (ACID Write).
-    2. Response returned to client upon commit.
-*   **Asynchronous Path (e.g., Background Report Generation):**
-    1. Client triggers action -> App Core saves "Pending" status in SQL.
-    2. App Core publishes event to Azure Service Bus.
-    3. Backend Worker consumes from Service Bus, processes data, updates SQL status to "Complete", and pushes completion event to Notification Topic.
+*   **Synchronous Write (e.g., Update Profile):**
+    1. Request -> API Gateway (JWT Validation).
+    2. App Service performs ACID transaction in RDS.
+    3. Service emits Domain Event to SNS.
+    4. Client receives 200 OK after RDS commit.
+*   **Asynchronous Background (e.g., Notification):**
+    1. SNS pushes to SQS.
+    2. Background Worker consumes SQS.
+    3. Worker interacts with third-party service (e.g., SES/SNS for SMS).
+    4. Error handling via DLQ (Dead Letter Queue) + Exponential Backoff.
 
 ---
 
 ### 4. Storage, Caching & Data Boundaries
-*   **Transactional Data:** Azure SQL Database (India Central region) using Elastic Pools to balance performance/cost.
-*   **Caching:** Azure Redis (Premium tier) for session stickiness and frequently accessed read-models.
+*   **Transactional Data:** AWS RDS PostgreSQL (Multi-AZ deployment in `ap-south-1`).
+*   **Caching:** Redis (ElastiCache) for session management and query caching.
 *   **Consistency Model:** 
-    *   **Primary Store:** Strict ACID consistency. 
-    *   **Read Models:** Eventual consistency (updates via Service Bus events).
+    *   Primary: Strong consistency for user data (ACID).
+    *   Secondary: Eventual consistency for search/analytics via read-replicas.
 
 ---
 
 ### 5. Security Architecture & Threat Perimeter
-*   **IAM:** Microsoft Entra ID (OIDC/OAuth2). JWTs are issued for stateless authentication; short-lived tokens (15 mins) with refresh tokens.
+*   **Identity:** OAuth2 + OIDC via AWS Cognito. JWTs rotated every 60 mins.
 *   **Network:** 
-    *   Private Endpoints for all PaaS services (SQL, Redis, Service Bus).
-    *   VNet Injection for App Services.
-    *   NSG (Network Security Groups) allowing traffic only from APIM/Subnet.
-*   **Residency:** Strict "India Central" (Pune) region pinning for all data-at-rest and compute resources, governed by Azure Policy.
+    *   VPC Isolation: Private Subnets for RDS/App servers.
+    *   TLS 1.3 mandated for all ingress/egress.
+    *   WAF at the Edge to mitigate OWASP Top 10.
+*   **Data Residency:** All AWS infrastructure is strictly pinned to the `ap-south-1` (Mumbai) region. RDS encryption at-rest uses AWS KMS with Customer Managed Keys (CMK).
 
 ---
 
-### 6. Scalability & Resilience
-*   **Auto-Scaling:** KEDA (Kubernetes-based Event Driven Autoscaling) or Azure App Service Autoscale based on CPU (70% threshold) and request queue length.
+### 6. Scalability, Resilience & Fault-Tolerance
+*   **Auto-Scaling:** ECS Service Auto Scaling based on CPU/Memory (>70%) and Request Count. 
 *   **Fault Tolerance:**
-    *   **Circuit Breakers:** Polly (in .NET) or native resilience patterns to trip during downstream outages.
-    *   **Retries:** Exponential backoff for transient SQL/Service Bus errors.
-    *   **Dead-Letter Queues:** All failed background jobs are routed to a DLQ for manual inspection.
+    *   **Circuit Breakers:** Implemented at the Service level to prevent cascading failure from third-party APIs.
+    *   **Retry Policy:** Exponential backoff implemented for all downstream dependencies.
+    *   **DLQ:** All failed async background jobs moved to SQS-DLQ for reconciliation.
 
 ---
 
-### 7. High-Level ASCII Architecture
+### 7. High-Level System Architecture Diagram
 
 ```text
-[ CLIENTS ]
-     |
-[ Azure Front Door (WAF/CDN) ]
-     |
-[ Azure API Management (APIM) ]  <-- Auth/Rate Limiting
-     |
--------------------------------------------------------
-[ VNet (India Central) ]
-     |
-     +--[ App Service (Modular Monolith) ] <--> [ Redis ]
-     |           |        |
-     |           |        +------> [ Azure SQL (ACID) ]
-     |           |
-     |           +----[ Azure Service Bus ]
-     |                      |
-     +--[ Backend Worker Service ]
--------------------------------------------------------
+[User / Client] 
+      |
+[CloudFront (CDN)] --> [AWS WAF]
+      |
+[API Gateway (Cognito Auth)]
+      |
+      +-------------------------------------------+
+      |        VPC (ap-south-1 / India)           |
+      | +---------------------------------------+ |
+      | | Load Balancer (ALB)                   | |
+      | +---------------------------------------+ |
+      |          |                              | |
+      | [ECS Fargate (Modular Monolith Nodes)]  | |
+      |          |                              | |
+      |    +-----+-----+      +-------------+   | |
+      |    |  Redis    |      |  RDS (PG)   |   | |
+      |    +-----+-----+      +------+------+   | |
+      |          |                   |          | |
+      |    [SNS/SQS (Async Workers)]-+          | |
+      +-------------------------------------------+
 ```
 
 ---
 
 ### 8. Architectural Trade-offs & Anti-Patterns Avoided
-*   **Avoided Microservices:** Premature distribution introduces network latency and debugging overhead that is unacceptable for a 2-month MVP.
-*   **Avoided NoSQL:** While horizontally scalable, the business requirement for transactional integrity suggests an RDBMS (SQL) is safer to reduce development time on complex joins/ACID logic.
-*   **Avoided Self-Managed Infrastructure:** Strictly using PaaS (Azure SQL, App Service) to minimize DevOps overhead (Patching/Backups) and focus purely on feature delivery.
+*   **Avoided Microservices:** Prematurely splitting into microservices would introduce serialization overhead and operational complexity that would jeopardize the 5-month timeline.
+*   **Avoided NoSQL for Core:** Keeping core transactional data in Relational (PostgreSQL) avoids eventual consistency nightmares during the MVP phase.
+*   **Deferred Pattern:** Service Mesh (Istio/Linkerd) is deferred. We use ALB native health checks and simple retries to keep the networking stack clean until we hit >10x scale.
 
 ---
 
 ## Section 3: Technology Stack & Architectural Trade-Offs
 *Synthesized by Technology Advisor Agent*
 
-As Principal Technology Advisor for MindMesh AI, I have architected the following technology stack to support 50,000 DAU with 2,500 req/sec peak throughput. Given the "Enterprise" preference and a 2-month delivery timeline, we prioritize **stability, managed services (PaaS), and mature ecosystems** to minimize operational overhead and maximize development velocity.
+As the Principal Technology Advisor for MindMesh AI, I have architected the following stack. Given the **Enterprise** requirement, the **AWS** constraint, and the performance target of **2,500 req/sec**, the focus is on managed services, high availability, and horizontal scalability within the **AWS Asia Pacific (Mumbai) region (ap-south-1)**.
 
 ---
 
-### 1. Authoritative Recommended Technology Stack Matrix
+### 1. Authoritative Technology Stack Matrix
 
 | Layer / Capability | Recommended Technology | Version / Paradigm | Rationale & Justification |
 | :--- | :--- | :--- | :--- |
-| **Backend** | .NET 8 (C#) | LTS / Web API | High performance, strict typing, massive enterprise support, superior Azure integration. |
-| **Primary Database** | Azure SQL Database | Managed RDBMS | ACID compliance, auto-scaling, built-in backups, zero-maintenance. |
-| **Caching** | Azure Cache for Redis | Premium Tier | Sub-millisecond latency; essential for 2,500 req/sec throughput. |
-| **Messaging/Queue** | Azure Service Bus | Standard Tier | Enterprise-grade reliability, FIFO, transactional support. |
-| **Frontend** | React / TypeScript | 18+ | Largest talent pool, highly modular, fast development lifecycle. |
-| **Cloud Hosting** | Azure App Service | Linux / Bicep | PaaS model removes OS-level management; rapid deployment via CI/CD. |
+| **Backend Framework** | Java / Spring Boot | 3.2.x | Enterprise standard; superior JIT compiler; excellent ecosystem. |
+| **Primary Database** | Amazon Aurora (PostgreSQL) | 15.x | High-performance managed RDBMS; optimal for ACID compliance. |
+| **Frontend** | React + TypeScript | 18.x | Strong typing, high developer velocity, vast component ecosystem. |
+| **Caching/Queue** | Redis (ElastiCache) | 7.x | Sub-millisecond latency for session/API caching. |
+| **Message Queue** | Amazon SQS | Managed | Zero-maintenance; scales infinitely; handles peak spikes. |
+| **API Gateway** | AWS API Gateway | REST/WebSockets | Built-in throttling, AuthN/AuthZ integration. |
 
 ---
 
 ### 2. In-Depth Comparative Trade-Off Analysis
 
 #### Backend Framework
-| Feature | **.NET 8 (Winner)** | Java (Spring Boot) | Node.js (NestJS) |
-| :--- | :--- | :--- | :--- |
-| **Velocity** | High (Excellent tooling) | Moderate (Boilerplate) | High (Unified language) |
-| **Perf/Throughput** | Elite (AOT/JIT) | High (JVM optimization) | Good (Event-loop limited) |
-| **Memory Footprint** | Low (Compact) | High (JVM Overhead) | Moderate |
-| **Verdict** | Chosen for native Azure synergy and superior performance under load. | | |
+*   **Chosen: Spring Boot (Java)** vs. Node.js vs. Go
+    *   **Spring Boot:** Wins for Enterprise complexity, security, and mature dependency injection.
+    *   **Node.js:** Better for IO-bound concurrency, but lacks type safety maturity for large enterprise teams.
+    *   **Go:** Excellent performance, but shallower ecosystem for complex corporate integrations.
+*   **Verdict:** Spring Boot provides the best "Security-by-Design" and integration capabilities for Enterprise.
 
 #### Primary Database
-| Feature | **Azure SQL (Winner)** | MongoDB | PostgreSQL (Flexible Server) |
-| :--- | :--- | :--- | :--- |
-| **Schema Integrity** | Strict (Relational) | Flexible (Document) | Strict (Relational) |
-| **Scalability** | Vertical + Auto-scale | Horizontal (Sharding) | Horizontal (Read replicas) |
-| **Enterprise Mgmt** | Best-in-class | Good | Moderate |
-| **Verdict** | Chosen for strict transactional consistency and Azure-native feature set. | | |
+*   **Chosen: Aurora (PostgreSQL)** vs. MongoDB vs. Oracle RDS
+    *   **Aurora:** Superior to RDS for read scaling (read replicas) and auto-failover.
+    *   **MongoDB:** Great for flexible schemas, but less reliable for transactional integrity (ACID).
+    *   **Oracle:** Massive licensing costs, vendor lock-in, and operational complexity.
+*   **Verdict:** Aurora matches the performance needs while offering 99.99% availability.
 
-#### Messaging
-| Feature | **Azure Service Bus (Winner)** | RabbitMQ (On-VM) | Kafka (Event Hubs) |
-| :--- | :--- | :--- | :--- |
-| **Operational Effort** | Zero (PaaS) | High (Manual setup) | High (Complexity) |
-| **Throughput** | High | Very High | Elite |
-| **Reliability** | Enterprise-grade | Good | Elite |
-| **Verdict** | Chosen for guaranteed delivery without the operational tax of self-managing clusters. | | |
+#### Message Queue
+*   **Chosen: Amazon SQS** vs. RabbitMQ vs. Kafka
+    *   **SQS:** Purely managed; minimal operational overhead; matches delivery timeline perfectly.
+    *   **RabbitMQ:** Higher throughput potential, but requires management (EC2/EKS).
+    *   **Kafka:** Overkill for 50k DAU; steep learning curve for maintenance.
+*   **Verdict:** SQS allows the team to focus on logic rather than cluster orchestration.
 
 ---
 
 ### 3. Open-Source vs. Enterprise Strategy
-*   **Strategy:** Hybrid Enterprise. We leverage open-source standards (.NET, React, SQL-standard) while consuming them via **Managed Enterprise Services**.
-*   **Licensing:** 
-    *   **OSS Components:** All libraries are MIT/Apache 2.0 to ensure unrestricted commercial use.
-    *   **Vendor Lock-in:** Mitigated by utilizing **Clean Architecture (Onion)**. Business logic is separated from infrastructure interfaces, allowing us to swap Azure services for alternatives (e.g., AWS/GCP) if required, with minimal rework.
+*   **Licensing Compliance:** We prioritize **Apache 2.0 and MIT** licenses for application code.
+*   **Enterprise Support:** We leverage **AWS Business Support** to mitigate risk. All core frameworks (Spring) are open-source with massive corporate backing (VMware), eliminating "abandonware" risk.
+*   **Vendor Lock-in:** By using standard interfaces (JPA/Hibernate for DB, JMS/Spring Cloud for Messaging), we retain the ability to migrate to an "on-prem" or multi-cloud setup if strictly required in the future.
 
 ---
 
 ### 4. Database, Caching & Data Store Architecture
-*   **Database:** Azure SQL (Elastic Pool) to share resources across services while maintaining per-database performance metrics.
-*   **Caching:** **Redis Cache-Aside Pattern**. Application checks Redis first. If a miss occurs, query DB and update Redis. TTL set to 300s to ensure cache freshness.
-*   **Queue Architecture:** Azure Service Bus **Topics and Subscriptions** for pub/sub messaging. This allows decoupling services (e.g., User Service vs. Notification Service) to ensure we handle the 2,500 req/sec bursts without blocking the main execution path.
+*   **Database Paradigm:** Relational (Aurora) for consistent business logic. We will implement **read-replicas** to offload heavy reporting queries.
+*   **Caching Topology:** **Redis Read-Through Pattern.** The application queries Redis first; on miss, it queries Aurora and updates Redis. TTL set to 300s to balance staleness and load.
+*   **Queueing:** SQS acting as a buffer between the API tier and background worker services (e.g., sending emails, processing heavy AI payloads).
 
 ---
 
-### 5. Cloud Infrastructure Services Mapping (Azure - India Central)
+### 5. Cloud Infrastructure Services Mapping (AWS Mumbai)
 
 | Infrastructure Role | Cloud Service Selection | Configuration & Sizing Notes |
 | :--- | :--- | :--- |
-| **Compute** | Azure App Service | P1v3 Plan (Autoscaling enabled) |
-| **Managed DB** | Azure SQL | Business Critical (For latency/IOPS) |
-| **Cache** | Azure Redis Cache | Premium P1 (Persistence enabled) |
-| **Messaging** | Azure Service Bus | Standard (Multiple partitions) |
-| **Object Storage** | Azure Blob Storage | LRS (Locally Redundant) |
-| **Region** | **India Central (Pune)** | Ensures data residency compliance |
+| **Compute** | AWS Fargate (ECS) | Serverless containers; scales based on CPU/RAM metrics. |
+| **Managed DB** | Amazon Aurora | 2x db.r6g.large (1 Primary, 1 Replica). |
+| **Cache** | ElastiCache (Redis) | cache.t4g.medium (Multi-AZ enabled). |
+| **Object Storage** | S3 | Standard tier; Lifecycle policies for auto-archival. |
+| **Network** | VPC + NAT Gateway | Multi-AZ deployment (ap-south-1a, 1b). |
 
 ---
 
-### 6. Developer Experience & Quality Toolchain
-*   **Testing:** xUnit (Unit/Integration), Playwright (E2E testing).
-*   **Linting:** ESLint (Frontend), StyleCop/Roslyn Analyzers (Backend).
-*   **API Documentation:** OpenAPI 3.0 (Swagger) automatically generated via Swashbuckle.
-*   **CI/CD:** GitHub Actions + Azure Bicep for Infrastructure-as-Code (IaC) to ensure environment consistency.
+### 6. Developer Toolchain & Quality Tooling
+*   **Testing:** **JUnit 5** + **Mockito** (Unit), **Testcontainers** (Integration tests against real Postgres/Redis).
+*   **Linting:** **Checkstyle** (Java), **ESLint** (TypeScript).
+*   **Documentation:** **Springdoc OpenAPI (Swagger)** for auto-generating interactive API docs.
+*   **CI/CD:** AWS CodePipeline + CodeBuild (Immutable infrastructure approach).
 
 ---
 
-### 7. Technology Trade-offs & Risk Mitigation
+### 7. Technology Trade-offs & Risk Matrix
 
-| Risk | Mitigation |
-| :--- | :--- |
-| **Cold Starts** | Configure "Always On" for Azure App Service to maintain warm instances. |
-| **High Latency** | Enable Azure Front Door (Global Load Balancer) and use Geo-redundant read replicas if needed. |
-| **Deployment Risk** | Implement Blue-Green deployment strategy via Azure Deployment Slots to ensure zero downtime. |
-| **Throughput Limit** | Utilize Azure SQL "Elastic Pools" and Service Bus partitioning to burst beyond standard throughput constraints. |
+| Risk | Impact | Mitigation |
+| :--- | :--- | :--- |
+| **Cold Starts** | Medium | Provisioned Concurrency in ECS; warm-up scripts for Redis. |
+| **Data Latency** | Low | Keeping all services in `ap-south-1`. |
+| **Peak Load** | High | Auto-scaling groups configured for 60% CPU threshold. |
+| **Cloud Dependency** | Medium | Containerized apps ensure portablity; IaC via Terraform/CDK. |
 
-**Final Recommendation:** This stack provides the safest, fastest path to production for the 2-month timeline, leveraging the full power of Azure's PaaS offerings to allow your team to focus exclusively on business logic rather than infrastructure maintenance.
+**Final Recommendation:** Proceed with **Java/Spring Boot** on **AWS Fargate** with **Aurora PostgreSQL**. This stack maximizes the 5-month delivery timeline by utilizing managed services to reduce "undifferentiated heavy lifting," allowing your developers to focus strictly on business value.
 
 ---
 
 ## Section 4: Implementation Roadmap & Delivery Plan
 *Synthesized by Delivery Planner Agent*
 
-This delivery plan is engineered to meet the aggressive **2-month (8-week) MVP timeline** for MindMesh AI. Given the timeframe, we will utilize a **"Hardened Agile"** methodology, focusing on high-velocity execution with daily synchronization.
+This Delivery and Implementation Plan is designed for a **5-month (20-week) delivery window** to reach MVP launch. Given the aggressive timeline, we will adopt a **"Lean-Agile" approach**, prioritizing high-velocity releases with a strict focus on scope containment.
 
 ---
 
 ### 1. Delivery Methodology & Governance Framework
-We will operate on a **4-Sprint cadence (2-weeks per sprint)**.
-*   **Methodology:** Agile Scrum with extreme focus on "Definition of Done" (DoD).
-*   **Sprint Cadence:** 2 weeks. Sprint 1 & 2 (Development), Sprint 3 (Integration/Hardening), Sprint 4 (UAT/Security/Go-Live).
+We will utilize **Scrum with 2-week Sprint cadences** (10 total sprints).
+
+*   **Sprint 0 (Weeks 1-2):** Environment setup, CI/CD pipelines, architectural runway, and initial backlog grooming.
 *   **Governance:**
-    *   **Daily Stand-ups:** 15 mins (09:00 AM daily).
-    *   **Backlog Grooming:** Bi-weekly (every Wednesday).
-    *   **Stakeholder Demos:** End of each sprint (Friday).
-    *   **Exit Criteria:** Automated test suite pass, 80% code coverage, zero P1/P2 bugs.
+    *   **Daily Scrum:** 15 mins (Daily).
+    *   **Sprint Review/Demo:** EOW 2 (Stakeholder sign-off on features).
+    *   **Backlog Grooming:** Weekly (Wednesday).
+    *   **Executive Steering Committee:** Monthly (Health check, Risk review, Budget tracking).
+*   **Definition of Done (DoD):** Code merged to `main`, unit tests passed (>80% coverage), peer review completed, functional UAT sign-off, and security scan passed.
 
 ---
 
 ### 2. Comprehensive Implementation Workstreams
-| ID | Workstream | Key Epics & Deliverables | Owner | Duration |
+| ID | Workstream | Key Epics & Deliverables | Tech Owner | Duration |
 | :--- | :--- | :--- | :--- | :--- |
-| W1 | Infra & DevOps | CI/CD pipelines, Cloud landing zone, Observability | Lead DevOps | Weeks 1-2 |
-| W2 | AI/ML Core | Vector DB ingest, RAG pipeline, LLM integration | Lead AI Engineer | Weeks 1-6 |
-| W3 | Backend/API | AuthN/AuthZ, API gateways, Business logic | Backend Lead | Weeks 1-6 |
-| W4 | Frontend | UI components, Dashboard, Integration with API | Frontend Lead | Weeks 2-6 |
-| W5 | QA & Security | Load testing, Pen-testing, UAT | QA Lead | Weeks 5-8 |
+| W1 | Platform & Infra | Cloud environment, Terraform/IaC, CI/CD, Observability | DevOps Lead | 5 Months |
+| W2 | Core AI/Data | Model integration, RAG pipeline, Embedding DB, API layer | AI/ML Architect | 4 Months |
+| W3 | Backend/API | Microservices, Auth, Database schemas, Integration logic | Lead Dev | 4.5 Months |
+| W4 | Frontend UI/UX | Dashboard, Chat Interface, User Settings, State Mgmt | Frontend Lead | 4 Months |
+| W5 | QA & Security | Automated tests, Pen-testing, Load testing, UAT | QA Manager | 3 Months |
 
 ---
 
 ### 3. Staffing Model & Team Topology
 | Role | FTE | Seniority | Key Responsibilities | Focus |
 | :--- | :--- | :--- | :--- | :--- |
-| Tech Lead | 1 | Principal | Architecture, Code Reviews, Blocker resolution | All |
-| AI/ML Engineer | 2 | Senior | RAG implementation, LLM tuning | W2 |
-| Backend Eng | 2 | Senior | API Development, Database logic | W3 |
-| Frontend Eng | 1 | Mid/Sr | React/Next.js implementation | W4 |
-| DevOps/Sec | 1 | Senior | CI/CD, SecOps, Infrastructure | W1, W5 |
-| QA/Automation| 1 | Mid | Automated tests, Performance load testing | W5 |
+| Scrum Master / PM | 0.5 | Senior | Governance, blocker removal, reporting | All |
+| Solution Architect | 0.5 | Staff | System design, cross-team alignment | W1, W2 |
+| Backend Devs | 2 | Senior | API development, data orchestration | W3 |
+| AI/ML Engineer | 1 | Senior | Vector DB, RAG optimization | W2 |
+| Frontend Dev | 1 | Mid/Sr | UI/UX implementation | W4 |
+| QA Engineer | 1 | Senior | Automated test suites, security hardening | W5 |
 
 ---
 
-### 4. Milestone Schedule
-| Phase | Window | Deliverables | Exit Criteria |
+### 4. Phase-by-Phase Delivery Milestones
+| Month | Phase | Key Deliverables | Strict Exit Criteria |
 | :--- | :--- | :--- | :--- |
-| **Inception** | Week 1 | Repo, Infra, Auth Setup | Infra accessible; CI/CD pipeline active. |
-| **Alpha** | Weeks 2-4 | Core RAG pipeline, Basic UI | Functional RAG flow; Integration tests pass. |
-| **Beta** | Weeks 5-6 | Feature complete, E2E flows | 80% coverage; 0 Critical bugs. |
-| **Hardening** | Weeks 7-8 | Load tests, Security Audit, UAT | Pen-test cleared; UAT sign-off. |
+| 1 | Inception & Foundation | Infra setup, Auth/IAM, Core APIs | CI/CD active; Dev environment live |
+| 2 | Data & AI Core | RAG pipeline, Vector DB ingestion | Successful retrieval benchmarks |
+| 3 | Functional MVP | Core features, Frontend integration | Functional UAT sign-off |
+| 4 | Hardening & QA | Load testing, Security audit, Bug fixing | < 5 P1 bugs; 80% code coverage |
+| 5 | Launch Prep | User training, Prod deployment, Monitoring | Go-live approval; 99.9% uptime validation |
 
 ---
 
-### 5. Critical Path & Dependencies
-*   **Critical Path:** AI/ML Core (RAG Pipeline) -> Backend Integration -> Frontend UI -> Security Hardening.
-*   **Dependencies:**
-    1.  **Cloud Environment Access:** Required by Day 1.
-    2.  **LLM API Keys/Provisioning:** Required by Day 3.
-    3.  **Data Source Access:** Data must be sanitized and available for indexing by end of Week 1.
+### 5. Critical Path Analysis
+1.  **Dependency 1:** Cloud environment access and IAM roles (Must be ready by end of Week 1).
+2.  **Dependency 2:** Third-party API keys and Vendor Service Level Agreements (Must be secured by Week 3).
+3.  **Critical Path:** AI/Data ingestion -> API Middleware -> UI integration -> Security/Load Testing. *Delay in data ingestion directly pushes the MVP launch date.*
 
 ---
 
-### 6. QA, Testing & Performance Strategy
-*   **Testing Tiers:**
-    *   **Unit Testing:** Required for all code (80% coverage threshold).
-    *   **Integration:** Contract-based testing for all internal APIs.
-    *   **E2E:** Playwright/Cypress for user flows.
-*   **Performance:**
-    *   **Load Testing:** Using K6/JMeter to simulate 2x peak traffic (e.g., 500 concurrent users/sec).
-*   **Security:**
-    *   **Automated:** Snyk/SonarQube scans in CI/CD pipeline.
-    *   **Manual:** Penetration test by end of Week 7.
+### 6. QA & Performance Hardening Strategy
+*   **Unit Testing:** Integrated into CI pipeline. Threshold: 80% coverage.
+*   **Integration/E2E:** Playwright/Cypress automation for critical paths (Login, Data Query, Result Generation).
+*   **Performance:** Gatling or k6 simulations mimicking 2x expected peak traffic in Month 4.
+*   **Security:** Static Analysis (SAST) on every build; Dynamic Analysis (DAST) and Pen-testing performed by an external firm in Week 17-18.
 
 ---
 
 ### 7. Delivery Risk Register
-| Risk ID | Description | Impact (1-5) | Score | Mitigation |
-| :--- | :--- | :--- | :--- | :--- |
-| R1 | Latency in RAG/LLM calls | 5 | 20 | Implement caching/streaming; optimize prompt tokens. |
-| R2 | Data quality/hallucinations | 4 | 16 | Implement strict validation layer; human-in-the-loop review. |
-| R3 | Integration bottlenecks | 3 | 12 | Decouple backend from UI using API contracts (OpenAPI). |
-| R4 | Scope creep | 5 | 25 | Rigid adherence to "MoSCoW" priority; move extras to v1.1. |
+| ID | Risk | Cat. | L | I | Score | Mitigation |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| R1 | AI Latency | Tech | 4 | 5 | 20 | Implement caching; optimize RAG chunking. |
+| R2 | Integration lag | Tech | 3 | 4 | 12 | Use Mock APIs to parallelize frontend/backend. |
+| R3 | Scope Creep | Scope | 5 | 4 | 20 | Strict "Must-have" vs "Nice-to-have" filtering. |
+| R4 | Key Staff Loss | Team | 2 | 5 | 10 | Documented architecture; cross-training sessions. |
 
 ---
 
 ### 8. Post-MVP Evolution Roadmap
-*   **Phase 1 (Post-Month 2):** Optimization of RAG (Advanced Reranking).
-*   **Phase 2 (Month 3):** Implementation of User Feedback/RLHF loop.
-*   **Phase 3 (Month 4):** Support for multi-modal input (Audio/Images).
-*   **Phase 4 (Month 5+):** Enterprise-grade RBAC and auditing features for B2B scale.
-
----
-*Signed,*
-**Principal Delivery Lead, MindMesh AI**
+*   **Phase 1 (Post-Month 5):** Bug fixes, refinement of AI response accuracy, and user feedback incorporation.
+*   **Phase 2 (Month 6-8):** Implementation of "Nice-to-have" features (Advanced Reporting, API Gateway scaling, User-specific customization).
+*   **Phase 3 (Month 9+):** Enterprise-grade features (SSO/LDAP, Role-based access control [RBAC] granularities, Global multi-region deployment).
 
 ---
 *MindMesh Multi-Agent Engine • Autonomous Architecture Blueprinting*

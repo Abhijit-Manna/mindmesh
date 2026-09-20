@@ -6,7 +6,7 @@ PRESET_TEMPLATES = {
     "healthcare": {
         "title": "🏥 HealthTech Telemedicine",
         "business_idea": "An AI-powered telemedicine and remote patient monitoring platform that connects patients with licensed doctors for video consultations, manages electronic health records (EHR), tracks vital signs from wearable IoT devices, and complies strictly with HIPAA and local data protection regulations.",
-        "technology_preference": "Open-Source Stack (Python FastAPI / Node.js + React + PostgreSQL)",
+        "technology_preference": "Open-Source Stack",
         "cloud_preference": "AWS",
         "expected_daily_traffic": "50,000 DAU (Peak 2,500 req/sec)",
         "delivery_timeline_months": 4,
@@ -15,7 +15,7 @@ PRESET_TEMPLATES = {
     "fintech": {
         "title": "💳 AI FinTech NeoBank",
         "business_idea": "A next-generation digital banking platform offering multi-currency mobile wallets, instant peer-to-peer micro-payments, AI-driven real-time fraud detection on transactions, automated budget categorization, and secure open banking API integrations.",
-        "technology_preference": "Enterprise Stack (Java Spring Boot / C# .NET Core + Angular)",
+        "technology_preference": "Enterprise Stack",
         "cloud_preference": "Google Cloud (GCP)",
         "expected_daily_traffic": "100,000 DAU (High Concurrency & Load)",
         "delivery_timeline_months": 6,
@@ -24,7 +24,7 @@ PRESET_TEMPLATES = {
     "supply_chain": {
         "title": "📦 Smart Logistics & Fleet",
         "business_idea": "An end-to-end B2B supply chain visibility platform with real-time GPS fleet tracking, cold-chain temperature telemetry sensors, route optimization algorithms, dynamic warehouse inventory forecasting, and automated driver dispatch management.",
-        "technology_preference": "Microservices Mesh (Go Microservices + gRPC + React)",
+        "technology_preference": "Microservices Mesh",
         "cloud_preference": "AWS",
         "expected_daily_traffic": "50,000 DAU (Peak 2,500 req/sec)",
         "delivery_timeline_months": 5,
@@ -41,10 +41,10 @@ ARCHITECTURE_INSIGHTS = [
 
 TECH_STACK_OPTIONS = [
     "-- Select Technology Stack --",
-    "Open-Source Stack ",
-    "Enterprise Stack ",
-    "Microservices Mesh ",
-    "Serverless Ecosystem ",
+    "Open-Source Stack",
+    "Enterprise Stack",
+    "Microservices Mesh",
+    "Serverless Ecosystem",
     "No Preference"
 ]
 
