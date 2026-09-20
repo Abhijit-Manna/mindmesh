@@ -19,7 +19,7 @@ def create_business_analyst() -> Agent:
         ),
         backstory=BUSINESS_ANALYST_PROMPT,
         llm=get_ba_llm(),
-        tools=[get_serper_tool()],
+        tools=[],
         allow_delegation=False,
         verbose=True,
     )

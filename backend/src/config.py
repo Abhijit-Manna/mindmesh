@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     # ==========================================
     LOG_LEVEL: str = "INFO"
 
+    OMNIROUTE_BASE_URL: str
+    OMNIROUTE_API_KEY: str
+    OPENAI_API_KEY: str
     # ==========================================
     # Pydantic Settings Configuration
     # ==========================================

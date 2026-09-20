@@ -11,11 +11,12 @@ _crewai_cache.mark_cache_breakpoint = lambda msg: msg
 
 
 def get_llm(api_key: str, model: str) -> LLM:
-    """Create an LLM instance with a specific API key and model."""
+    """Create an LLM instance routed through OmniRoute."""
     return LLM(
-        model=model,
-        api_key=api_key,
-        max_tokens=8192,
+        model="openai/gemini-fallout",
+        api_key=settings.OMNIROUTE_API_KEY,
+        base_url=settings.OMNIROUTE_BASE_URL,
+        max_tokens=1000,
     )
 
 
