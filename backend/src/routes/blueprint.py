@@ -85,8 +85,7 @@ async def stream_blueprint_execution(payload: BlueprintRequest):
                     # Also save fallback file outputs
                     save_output(f"{run_id}.html", html_content)
                     save_output(f"{run_id}.md", md_content)
-                    save_output("final_output.html", html_content)
-                    save_output("final_output.md", md_content)
+                    
                     event_data["file_saved"] = f"outputs/{run_id}.html"
 
                 yield f"data: {json.dumps(event_data)}\n\n"

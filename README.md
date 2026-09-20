@@ -1,254 +1,644 @@
-# SolutionForge AI
+# MindMesh
 
-> Turn a business idea and delivery constraints into a decision-oriented solution blueprint.
+## AI Solution Architecture Blueprint Engine
 
-SolutionForge AI is a CrewAI-based multi-agent consulting assistant for the early stage of technical discovery. It combines business analysis, architecture, technology selection, and delivery planning into one structured report that a business or engineering team can use as a starting point.
+MindMesh is a full-stack, multi-agent architecture-planning application. It accepts a plain-language product idea and a small set of delivery constraints, then uses a sequential CrewAI workflow to produce an enterprise-style solution blueprint.
 
-The hackathon MVP is intentionally focused: capture the problem and constraints, run four specialized agents in sequence, and produce a viewable/downloadable HTML blueprint backed by the original Markdown output.
+The generated blueprint combines:
 
-## Why it matters
+- Business analysis and MVP scope
+- Functional and non-functional requirements
+- High-level system architecture and component interactions
+- Technology-stack recommendations and trade-offs
+- Implementation workstreams, team roles, milestones, and effort
+- Testing, deployment, risk, compliance, and future-evolution guidance
 
-Business teams often have a promising idea but no fast, repeatable way to answer:
+The application is intended for product owners, founders, business analysts, solution architects, engineering managers, technical consultants, and delivery teams who need a structured starting point for architecture and delivery planning before implementation begins.
 
-- What is the smallest useful MVP?
-- What architecture and technologies fit the expected scale?
-- What can a six-person team deliver within the stated timeline?
-- Which assumptions, dependencies, and risks need technical discovery?
+> **Important:** MindMesh generates architecture recommendations. It does not replace security review, compliance/legal advice, capacity testing, cost validation, or an implementation team's technical judgment.
 
-SolutionForge AI automates this early-stage consulting workflow without pretending that the generated blueprint replaces detailed discovery or implementation design.
+---
 
-## MVP features
+## Table of contents
 
-- Streamlit form for:
-  - Business idea/problem
-  - Technology preference: open-source or enterprise
-  - Cloud preference: AWS, Azure, GCP, or none
-  - Expected daily traffic
-  - Delivery timeline in months
-  - Country for data hosting
-- FastAPI endpoint that runs a sequential four-agent CrewAI workflow.
-- Context passed from Business Analyst to Solution Architect to Technology Advisor to Delivery Planner.
-- Structured consulting-style blueprint covering scope, stack, workstreams, timeline, risks, and future evolution.
-- Per-agent evaluation gates that can retry unsatisfactory outputs before passing context downstream.
-- CrewAI's built-in search tool for role-specific fact checking and source-aware recommendations.
-- Structured execution logs for agent inputs, outputs, evaluations, retries, and failures.
-- Markdown source converted to a styled HTML report.
-- HTML report displayed in the UI and available for download.
-- Input validation and backend error handling.
-- Built-in CrewAI search with source URLs and evidence where research is enabled.
+1. [What the project does](#what-the-project-does)
+2. [Architecture at a glance](#architecture-at-a-glance)
+3. [Technology stack](#technology-stack)
+4. [Repository structure](#repository-structure)
+5. [Prerequisites](#prerequisites)
+6. [Installation and configuration](#installation-and-configuration)
+7. [Running the application](#running-the-application)
+8. [Using the application](#using-the-application)
+9. [Multi-agent execution pipeline](#multi-agent-execution-pipeline)
+10. [API contract](#api-contract)
+11. [Persistence and generated files](#persistence-and-generated-files)
+12. [Configuration reference](#configuration-reference)
+13. [Development notes](#development-notes)
+14. [Troubleshooting](#troubleshooting)
+15. [Limitations and production considerations](#limitations-and-production-considerations)
 
-## How it works
+---
+
+## What the project does
+
+At a high level, a user:
+
+1. Describes a proposed product, its users, features, and business workflow.
+2. Selects a preferred technology ecosystem and cloud platform.
+3. Selects an expected traffic/scale range.
+4. Sets a delivery timeline and data-hosting jurisdiction.
+5. Starts blueprint generation.
+6. Watches the five specialist agents execute in real time.
+7. Reviews the final blueprint in HTML and section-specific tabs.
+8. Downloads the HTML report or reopens/deletes previous runs from the history sidebar.
+
+The frontend defaults to `http://localhost:8000` for the backend. The backend exposes both a synchronous JSON endpoint and an SSE streaming endpoint; the Streamlit UI uses the streaming endpoint so that users can see agent progress and quality-gate events as they happen.
+
+## Architecture at a glance
 
 ```mermaid
 flowchart LR
-    U[User idea and constraints] --> S[Streamlit input form]
-    S --> F[FastAPI /generate-blueprint]
-    F --> BA[Business Analyst]
-    BA --> E1[Evaluate / retry]
-    E1 --> SA[Solution Architect]
-    SA --> E2[Evaluate / retry]
-    E2 --> TA[Technology Advisor]
-    TA --> E3[Evaluate / retry]
-    E3 --> DP[Delivery Planner]
-    DP --> E4[Evaluate / retry]
-    DP --> M[Blueprint Markdown]
-    M --> H[Styled HTML]
-    H --> V[View and download]
+    U[User] --> S[Streamlit UI<br/>frontend/app.py]
+    S -->|HTTP JSON / SSE| F[FastAPI API<br/>backend/main.py]
+    F --> P[Sequential pipeline]
+    P --> BA[Business Analyst]
+    BA --> SA[Solution Architect]
+    SA --> TA[Technology Advisor]
+    TA --> DP[Delivery Planner]
+    DP --> RW[Report Writer]
+    BA -. evaluation .-> EV[Evaluator quality gate]
+    SA -. evaluation .-> EV
+    TA -. evaluation .-> EV
+    DP -. evaluation .-> EV
+    RW --> B[Master blueprint builder]
+    B --> H[Markdown + HTML]
+    H --> DB[(SQLite<br/>backend/db/mindmesh.db)]
+    H --> O[backend/outputs]
+    F -->|history / retrieve / delete| DB
 ```
 
-The crew is sequential. Each agent receives the relevant outputs from the agents before it, uses CrewAI's built-in search tool for role-specific facts when research is enabled, and must pass an evaluation gate before its output is handed downstream. Failed evaluations trigger a bounded retry with feedback. CrewAI's sequential process and the surrounding Python orchestration provide coordination; a separate coordinator agent is not required for this MVP. The Technology Advisor is the authoritative source for technology choices; the Delivery Planner uses that agreed stack rather than independently introducing alternatives.
+### Runtime request flow
 
-These safeguards improve reliability but do not guarantee that every recommendation is correct. CrewAI search provides external evidence, evaluators enforce role-specific quality criteria, deterministic validators check structure and consistency, and bounded retries improve failed outputs. Human review remains the final safeguard for business assumptions, security, compliance, cost, data residency, and timeline decisions.
+```mermaid
+sequenceDiagram
+    participant Browser as User browser
+    participant UI as Streamlit frontend
+    participant API as FastAPI backend
+    participant Crew as CrewAI agents
+    participant Eval as Evaluator
+    participant Store as SQLite/filesystem
 
-### Agent pipeline
+    Browser->>UI: Submit six blueprint parameters
+    UI->>API: POST /api/v1/blueprints/stream
+    API-->>UI: init SSE event
+    loop Five sequential agents
+        API->>Crew: Execute specialist task
+        Crew->>Eval: Evaluate generated deliverable
+        Eval-->>API: score, pass/fail, critique
+        API-->>UI: agent_start/evaluation/agent_complete
+    end
+    API->>API: Build canonical 14-section Markdown
+    API->>API: Convert Markdown to HTML
+    API->>Store: Save record and .md/.html artifacts
+    API-->>UI: complete SSE event
+    UI-->>Browser: Render tabs and download action
+```
 
-1. **Business Analyst** — identifies users, stakeholders, functional and non-functional requirements, MVP versus future scope, assumptions, constraints, and risks.
-2. **Solution Architect** — translates requirements into architecture style, components, data flow, storage, security, scalability, and an MVP-first evolution path.
-3. **Technology Advisor** — recommends specific technologies, evaluates open-source versus enterprise options, respects cloud preference, and explains trade-offs, risks, complexity, and lock-in.
-4. **Delivery Planner** — turns the preceding context into workstreams, roles, milestones, dependencies, testing/deployment approach, risks, and future evolution.
+### Service boundaries
 
-Every recommendation must include rationale, trade-offs, and risks. The output should be internally consistent and proportionate to the stated scope and timeline.
+| Service | Location | Default address | Responsibility |
+| --- | --- | --- | --- |
+| Frontend | `frontend/` | `http://localhost:8501` | Streamlit form, progress UI, history sidebar, report viewer |
+| Backend | `backend/` | `http://localhost:8000` | FastAPI routes, agent orchestration, evaluation, persistence |
+| LLM providers | Configured externally | External API | Generate specialist and evaluation responses |
+| Search provider | Serper.dev | External API | Web search tool available to specialist agents |
+| Local storage | `backend/db/`, `backend/outputs/` | Local filesystem | Blueprint history and exported artifacts |
 
-## Confirmed technology stack
+## Technology stack
 
-| Area | Choice | Purpose |
-| --- | --- | --- |
-| Orchestration | CrewAI | Sequential agents and context handoff |
-| Application language | Python | CrewAI, API, and report-processing implementation |
-| LLM access | CrewAI LLM integration via OpenRouter | Hackathon access to free-tier models |
-| Backend | FastAPI | Validated API endpoint and error handling |
-| Frontend | Streamlit | Input form, progress display, report rendering, download |
-| Report format | Markdown → styled HTML | Readable source plus viewable/downloadable result |
-| Research and verification | CrewAI `WebsiteSearchTool` | Role-specific web research with source URLs and evidence |
-| Evaluation and observability | Python evaluators + structured logs | Quality gates, bounded retries, and debugging |
-| Runtime | Local development; optional container/cloud deployment | Fast hackathon setup with a path to deployment |
+### Frontend
+
+- **Python 3.11+**
+- **Streamlit** for the interactive web interface
+- Python standard-library `urllib` client for backend HTTP calls
+- Server-Sent Events (SSE) parsing for live generation progress
+- Custom CSS in `frontend/styles.py`
+
+### Backend
+
+- **FastAPI** for the HTTP API and OpenAPI documentation
+- **Pydantic v2** for request validation and settings
+- **Uvicorn/FastAPI CLI** for local development serving
+- **CrewAI** for agent/task/crew orchestration
+- **Google Gemini through CrewAI/LiteLLM integration** for agent generation
+- **CrewAI Tools / SerperDevTool** for web search
+- **SQLite** through Python's `sqlite3` module for history
+- **Markdown** conversion to downloadable HTML
+
+### Workspace and dependency management
+
+- **uv** manages the Python environment and lockfile.
+- The repository root is a uv workspace whose members include `backend`.
+- `uv.lock` records resolved dependency versions.
+- The backend has its own `backend/pyproject.toml`; the root project declares the frontend and workspace-level dependencies.
 
 ## Repository structure
 
-The repository is currently a scaffold. The files and directories already present are shown first; the planned application modules are the target structure for the MVP.
-
 ```text
 mindmesh/
-├── README.md
-├── API_CONTRACTS.md
-├── SOLUTION_BLUEPRINT.md
-├── TODO.md
-├── pyproject.toml                 # Root uv project and workspace declaration
-├── .python-version
+├── frontend/
+│   ├── app.py                  # Streamlit entry point and UI state router
+│   ├── api_client.py           # Health, generation, history, retrieve, delete calls
+│   ├── constants.py            # Presets, select-box options, agent metadata
+│   ├── styles.py               # Frontend design system/CSS
+│   ├── components/
+│   │   ├── header.py            # Hero header and backend status
+│   │   └── sidebar.py           # Saved blueprint history
+│   └── views/
+│       ├── form_view.py         # Six-parameter input form and validation
+│       ├── execution_view.py   # Live SSE progress display
+│       └── dashboard_view.py   # HTML report and section tabs
 ├── backend/
-│   ├── README.md
-│   ├── pyproject.toml             # Backend package manifest
-│   └── src/
-│       ├── main.py                # Current backend entry-point placeholder
-│       ├── tasks.py               # Current task placeholder
-│       └── agents/                # Agent modules to be implemented
-└── frontend/                      # Streamlit application to be implemented
+│   ├── main.py                 # FastAPI application and route registration
+│   ├── pyproject.toml          # Backend dependency manifest
+│   ├── .env.example            # Required environment-variable template
+│   ├── src/
+│   │   ├── config.py           # Pydantic settings loaded from .env
+│   │   ├── crew.py             # Standard five-agent CrewAI crew
+│   │   ├── pipeline.py         # Streaming execution and evaluation gates
+│   │   ├── evaluation.py       # Evaluator invocation and score parsing
+│   │   ├── blueprint_builder.py# Canonical 14-section report composition
+│   │   ├── llm.py              # Per-agent model/key construction
+│   │   ├── tools.py            # Shared Serper search tool
+│   │   ├── db.py               # SQLite schema and CRUD/history sync
+│   │   ├── routes/
+│   │   │   ├── blueprint.py    # Blueprint API contract
+│   │   │   └── health.py       # Health endpoints
+│   │   ├── agents/             # Agent definitions, prompts, and task factories
+│   │   └── utils/              # HTML conversion, file output, section parsing
+│   ├── db/mindmesh.db          # Local SQLite database (created/updated at runtime)
+│   └── outputs/                # Generated Markdown and HTML files
+├── pyproject.toml              # Root project and uv workspace configuration
+├── uv.lock                     # Locked dependency graph
+└── README.md
 ```
 
-Target MVP modules should be added under the existing packages rather than introducing a second application layout:
+## Prerequisites
 
-```text
-backend/src/
-├── main.py                        # FastAPI application and routes
-├── routes/
-│   ├── health.py                  # GET /health
-│   └── blueprints.py              # /api/v1/blueprints routes
-├── config.py                      # Environment-backed settings
-├── models.py                      # Pydantic request/response contracts
-├── orchestration.py               # Sequential CrewAI run, gates, retries, and events
-├── research.py                    # CrewAI built-in search tool factory/configuration
-├── evaluation.py                  # Deterministic role-specific evaluators
-├── reporting.py                   # Markdown validation and HTML conversion
-├── tasks.py                       # CrewAI task definitions
-└── agents/
-    ├── business_analyst.py
-    ├── solution_architect.py
-    ├── technology_advisor.py
-    └── delivery_planner.py
-frontend/
-└── streamlit_app.py               # Input form, progress, report, and download
-```
+Install the following before starting:
 
-The target tree is deliberately documented separately from the current tree so setup instructions do not imply that unimplemented modules already exist.
+- Python **3.11 or newer**
+- [uv](https://docs.astral.sh/uv/) installed and available on `PATH`
+- Internet access for package installation and LLM/search API calls
+- A Gemini API key for each configured agent role
+- A Serper.dev API key
 
-See [API_CONTRACTS.md](API_CONTRACTS.md) for the canonical endpoint, routing, schema, and error contracts.
-
-## Setup
-
-### Prerequisites
-
-- Python 3.14+ (required by the current project manifests).
-- `uv` for workspace dependency and command management.
-- An OpenRouter API key.
-- The repository checked out locally.
-- Credentials required by the selected CrewAI search provider, if the configured search backend requires them.
-
-### Install
+On Windows PowerShell, verify the tools:
 
 ```powershell
+python --version
+uv --version
+```
+
+## Installation and configuration
+
+### 1. Install dependencies
+
+From the repository root:
+
+```powershell
+cd C:\Users\rahul\OneDrive\Desktop\CTS\mindmesh
 uv sync
 ```
 
-Create a `.env` file (never commit it):
+`uv sync` creates or updates the uv-managed environment and installs the root project plus the backend workspace dependencies from the lockfile. If you only want to prepare the backend environment, run the same command from `backend`.
 
-```env
-OPENROUTER_API_KEY=your_openrouter_key
-OPENROUTER_MODEL=your_free_tier_model
-ENABLE_SEARCH=true
-MAX_AGENT_RETRIES=2
-LOG_LEVEL=INFO
-```
+The frontend command uses `uvx streamlit`, which can provision Streamlit in an isolated uv tool environment. Running `uv sync` first is still recommended because it makes the project environment reproducible and ensures the workspace dependencies are available.
 
-The exact free-tier model is selected through configuration so the team can use an available OpenRouter model during the hackathon. Search enablement and retry limits remain configurable so the core workflow can be tested with mocks or when the configured search provider is unavailable. The implementation should instantiate CrewAI's built-in `WebsiteSearchTool` and attach it to the relevant agents rather.
+### 2. Create the backend environment file
 
-## Run locally
-
-After the planned backend entry point is implemented, start the API in one terminal:
+Copy the template:
 
 ```powershell
-uv run uvicorn backend.src.main:app --reload --port 8000
+Copy-Item backend\.env.example backend\.env
 ```
 
-Start Streamlit in another:
+Open `backend\.env` and replace every placeholder with a real value. At minimum, the application settings require:
+
+- `GEMINI_API_KEY_BA`
+- `GEMINI_API_KEY_SA`
+- `GEMINI_API_KEY_TA`
+- `GEMINI_API_KEY_DP`
+- `GEMINI_API_KEY_RW`
+- `GEMINI_API_KEY_EV`
+- `SERPER_API_KEY`
+
+Do not commit `backend\.env` or expose API keys in the frontend. The frontend only calls the local backend; provider credentials are loaded by the backend.
+
+### 3. Optional model and runtime configuration
+
+The `.env.example` file includes defaults for each role's model, retries, evaluation, timeout, and logging. Keep the model names compatible with the configured CrewAI/LiteLLM provider. See [Configuration reference](#configuration-reference).
+
+## Running the application
+
+Run the backend and frontend in **separate terminals**.
+
+### Terminal 1: start the backend
 
 ```powershell
-uv run streamlit run frontend\streamlit_app.py
+cd C:\Users\rahul\OneDrive\Desktop\CTS\mindmesh\backend
+uv run fastapi dev main.py
 ```
 
-Open the Streamlit URL printed by the command, normally `http://localhost:8501`. The API's interactive documentation is available at `http://localhost:8000/docs`.
+The API should be available at:
 
-If the application is containerized later, keep the same logical API and UI boundaries; container/cloud deployment is optional for the MVP.
+- Application: `http://localhost:8000`
+- OpenAPI Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+- Health check: `http://localhost:8000/health`
 
-## Demo walkthrough
+### Terminal 2: start the frontend
 
-Use any business idea and its real delivery constraints. For a judge demo, enter a sufficiently detailed problem statement that names the users, desired outcome, approximate scale, timeline, and important constraints. Then choose the technology preference, cloud preference, expected daily traffic, delivery timeline, and data-hosting country.
-
-For example, a demo input can describe:
-
-> A business needs a customer-facing platform to replace a manual operational process. Users need to submit requests, track status, and receive notifications; internal staff need to review and manage those requests. The team needs a production-ready MVP within the stated timeline.
-
-The domain, users, workflows, scale, timeline, cloud, technology preference, and data-hosting country should come from the scenario being tested, not from a hard-coded domain fixture.
-
-Click **Generate Blueprint**. The UI should show agent progress in order, then render the report and offer an HTML download. The generated recommendations should reflect the submitted idea and constraints rather than returning a generic technology list.
-
-## Sample output snippet
-
-```markdown
-# Solution Blueprint
-
-## Delivery Overview
-- Production-ready MVP for the submitted business idea
-- Delivery plan sized to the submitted traffic and timeline
-- Architecture and hosting recommendations aligned to the submitted constraints
-
-## Recommended Technology Stack
-- Specific recommendations selected for the submitted requirements
-- Open-source or enterprise choices evaluated against the stated preference
-- Cloud choices aligned to the submitted cloud and data-hosting constraints
-
-## Delivery Risks & Mitigations
-- Domain-specific consistency and concurrency risks identified from the submitted workflows
-- Data protection, access control, auditability, and operational risks addressed for the submitted context
+```powershell
+cd C:\Users\rahul\OneDrive\Desktop\CTS\mindmesh\frontend
+uvx streamlit run app.py
 ```
 
-The exact technologies and wording are generated by the crew; the snippet illustrates the expected decision-oriented shape, not a hard-coded report.
+Open the URL printed by Streamlit, normally `http://localhost:8501`.
 
-### Trust model
+The frontend's API base URL is initialized in `frontend/app.py` as `http://localhost:8000`. If the backend runs elsewhere, update that value or provide a configuration mechanism before deploying the frontend to another environment.
 
-The blueprint is a starting point for technical discovery, not an automatically approved production architecture. Agents should distinguish sourced facts from assumptions, preserve relevant source URLs, and identify uncertainty or conflicting evidence. A final human review is required before implementation decisions are treated as authoritative.
+## Using the application
 
-## Report contract
+### Input fields
 
-Every final blueprint should include:
+The form in `frontend/views/form_view.py` sends one JSON object with six required fields:
+
+| Field | Type | Meaning | UI constraints/examples |
+| --- | --- | --- | --- |
+| `business_idea` | string | Product concept, users, features, and workflow | The UI asks for at least 15 non-whitespace characters |
+| `technology_preference` | string | Preferred technology ecosystem | Open-Source Stack, Enterprise Stack, Microservices Mesh, Serverless Ecosystem, or No Preference |
+| `cloud_preference` | string | Primary hosting preference | AWS, GCP, Azure, Multi-Cloud, On-Premises, or No Preference |
+| `expected_daily_traffic` | string | Expected scale profile | 10,000 DAU, 50,000 DAU, 100,000 DAU, or 1,000,000+ DAU |
+| `delivery_timeline_months` | integer | Target MVP delivery duration | UI range is 1–36 months |
+| `data_hosting_country` | string | Data residency/jurisdiction target | United States, India, Germany/EU, Singapore, UK, or Global Multi-Region |
+
+Preset templates are available for HealthTech, FinTech, and Smart Logistics/Fleet use cases. They are convenience values only; all fields can be changed before submission.
+
+### Output
+
+Each successful run produces:
+
+- A short `run_id` (the first 12 characters of a UUID)
+- A canonical Markdown blueprint
+- A styled HTML blueprint
+- A SQLite history record
+- `backend/outputs/{run_id}.md`
+- `backend/outputs/{run_id}.html`
+
+The canonical report contains these 14 sections:
 
 1. Delivery Overview
-2. Business/MVP Scope & Priorities
+2. Business / MVP Scope and Priorities
 3. Recommended Technology Stack
 4. Implementation Workstreams
-5. Recommended Team & Roles
-6. Delivery Timeline & Milestones
+5. Recommended Team and Roles
+6. Delivery Timeline and Milestones
 7. Effort & Complexity Assessment
-8. Dependencies & Prerequisites
-9. High-Level Architecture (text-based diagram)
+8. Dependencies and Prerequisites
+9. High-Level Solution Architecture
 10. Testing & Quality Strategy
 11. Deployment & Release Strategy
 12. Delivery Risks & Mitigations
 13. Future Evolution
 14. Assumptions & Open Questions
 
-## Team
+The dashboard exposes the full HTML report and tabs for Business Analysis, System Architecture, Technology Stack & Trade-offs, and Delivery Roadmap.
 
-| Member | Focus |
-| --- | --- |
-| Member 1 | Business Analyst agent and requirements contract |
-| Member 2 | Solution Architect agent |
-| Member 3 | Technology Advisor agent |
-| Member 4 | Delivery Planner agent |
-| Member 5 | CrewAI orchestration and FastAPI integration |
-| Member 6 | Streamlit frontend, testing, demo, and documentation coordination |
+## Multi-agent execution pipeline
 
-Names can be added by the team without changing the ownership boundaries.
+The standard crew in `backend/src/crew.py` is sequential. Each downstream task receives the relevant upstream task context:
+
+| Order | Agent | Primary responsibility |
+| --- | --- | --- |
+| 1 | Business Analyst | Stakeholders, goals, functional requirements, non-functional requirements, MVP scope |
+| 2 | Solution Architect | Components, data flows, security perimeter, scalability, architecture topology |
+| 3 | Technology Advisor | Technology choices, alternatives, trade-offs, operational implications |
+| 4 | Delivery Planner | Workstreams, milestones, team shape, effort, risks, testing and release plan |
+| 5 | Report Writer | Cross-discipline synthesis and authoritative executive blueprint |
+
+When enabled, the evaluator runs after each specialist deliverable. If the score is below `EVALUATION_THRESHOLD`, the pipeline retries the agent up to `MAX_AGENT_RETRIES` times. The UI receives `evaluation_start`, `evaluation`, and `agent_retry` events for this quality gate.
+
+The final report is assembled by `build_master_blueprint`; it does not simply concatenate raw agent responses. Topic-specific extraction routes content into the 14 stable headings and converts the result to HTML.
+
+## API contract
+
+The backend registers the health router at both the root and `/api/v1` prefixes, and registers blueprint routes under `/api/v1/blueprints`.
+
+### Base URLs
+
+```text
+http://localhost:8000
+http://localhost:8000/api/v1
+```
+
+FastAPI also publishes the interactive contract at `/docs` and the machine-readable schema at `/openapi.json`.
+
+### Request schema: `BlueprintRequest`
+
+```json
+{
+  "business_idea": "An online platform for booking home healthcare services",
+  "technology_preference": "Open-Source Stack",
+  "cloud_preference": "AWS",
+  "expected_daily_traffic": "10,000 DAU (Standard MVP Scale)",
+  "delivery_timeline_months": 3,
+  "data_hosting_country": "India"
+}
+```
+
+Pydantic validates the JSON shape and primitive types. Business-level option validation is primarily performed in the Streamlit form; API clients should still send meaningful, non-empty values.
+
+### `GET /health` and `GET /api/v1/health`
+
+Returns a lightweight liveness response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+The frontend tries `/health`, `/api/v1/health`, and `/api/v1/blueprints/list` when checking connectivity.
+
+### `POST /api/v1/blueprints` or `/api/v1/blueprints/generate`
+
+Runs the standard asynchronous CrewAI kickoff, waits for completion, persists the result, and returns JSON.
+
+**Success:** HTTP `201 Created`
+
+```json
+{
+  "run_id": "efc2fc1f-032",
+  "status": "completed",
+  "file_saved": "outputs/efc2fc1f-032.html",
+  "markdown": "# Enterprise Solution Blueprint\n...",
+  "result": "<!DOCTYPE html>..."
+}
+```
+
+- `run_id`: identifier used by history, retrieval, and deletion endpoints.
+- `file_saved`: relative HTML artifact path.
+- `markdown`: canonical report source.
+- `result`: generated HTML presentation.
+
+**Failure:** HTTP `500`
+
+```json
+{
+  "detail": "Blueprint generation failed: <provider or pipeline error>"
+}
+```
+
+### `POST /api/v1/blueprints/stream`
+
+Runs the same five-agent process but returns `text/event-stream`. Each message is an SSE record with a JSON object after `data:`.
+
+Example:
+
+```text
+data: {"event":"init","run_id":"efc2fc1f-032","message":"Initialized autonomous multi-agent pipeline with quality evaluation gates.","progress":3}
+
+data: {"event":"agent_start","agent":"Business Analyst","step":1,"total":5,"role":"Requirements & MVP Scope Analyst","message":"...","progress":5}
+
+data: {"event":"evaluation","agent":"Business Analyst","step":1,"score":0.86,"passed":true,"summary":"...","critique":[],"remediation":"None","message":"Evaluator Score: 0.86 — Accepted","progress":11}
+
+data: {"event":"agent_complete","agent":"Business Analyst","step":1,"total":5,"output":"...","message":"...","progress":22}
+
+data: {"event":"complete","run_id":"efc2fc1f-032","status":"completed","progress":100,"markdown":"...","html":"...","sections":{}}
+```
+
+#### SSE event types
+
+| Event | Purpose | Important fields |
+| --- | --- | --- |
+| `init` | Pipeline created | `run_id`, `message`, `progress` |
+| `agent_start` | Agent began work | `agent`, `step`, `total`, `role`, `message`, `progress` |
+| `evaluation_start` | Quality gate began | `agent`, `step`, `message`, `progress` |
+| `evaluation` | Quality score returned | `agent`, `step`, `score`, `passed`, `summary`, `critique`, `remediation`, `progress` |
+| `agent_retry` | Below-threshold result is being regenerated | `agent`, `step`, `retry_count`, `message`, `progress` |
+| `agent_complete` | Agent deliverable completed | `agent`, `step`, `output`, `message`, `progress` |
+| `complete` | Final report built and saved | `run_id`, `status`, `markdown`, `html`, `sections`, `progress` |
+| `error` | Pipeline failed | `run_id`, `error`, `message` |
+
+On `complete`, the backend saves the record to SQLite and writes both Markdown and HTML files. On an execution exception, the stream emits an `error` event rather than returning a normal JSON response.
+
+### `GET /api/v1/blueprints`, `/list`, or `/history`
+
+Returns up to 100 history entries:
+
+```json
+{
+  "total": 1,
+  "run_ids": ["efc2fc1f-032"],
+  "history": [
+    {
+      "id": 1,
+      "run_id": "efc2fc1f-032",
+      "created_at": "2026-09-20 14:45:00",
+      "business_idea": "An online platform...",
+      "technology_preference": "Open-Source Stack",
+      "cloud_preference": "AWS",
+      "expected_daily_traffic": "10,000 DAU (Standard MVP Scale)",
+      "delivery_timeline_months": 3,
+      "data_hosting_country": "India",
+      "status": "completed"
+    }
+  ]
+}
+```
+
+If the database has no records but output files exist, the endpoint can discover HTML files from `backend/outputs` as a filesystem fallback.
+
+### `GET /api/v1/blueprints/{run_id}`
+
+Returns a saved blueprint from SQLite first, then falls back to `{run_id}.md` and `{run_id}.html` in `backend/outputs`.
+
+```json
+{
+  "run_id": "efc2fc1f-032",
+  "status": "completed",
+  "result": "<!DOCTYPE html>...",
+  "markdown": "# Enterprise Solution Blueprint\n...",
+  "html": "<!DOCTYPE html>...",
+  "sections": {
+    "business_analyst": "...",
+    "solution_architect": "...",
+    "technology_advisor": "...",
+    "delivery_planner": "..."
+  },
+  "created_at": "2026-09-20 14:45:00",
+  "business_idea": "An online platform...",
+  "technology_preference": "Open-Source Stack",
+  "cloud_preference": "AWS"
+}
+```
+
+If the run does not exist, the endpoint returns HTTP `404`:
+
+```json
+{
+  "detail": "Blueprint output for run_id 'unknown-id' not found."
+}
+```
+
+### `DELETE /api/v1/blueprints/{run_id}`
+
+Deletes the SQLite record and any matching `.md`/`.html` files.
+
+**Success:** HTTP `200`
+
+```json
+{
+  "run_id": "efc2fc1f-032",
+  "status": "deleted",
+  "message": "Successfully deleted blueprint efc2fc1f-032 from SQLite and storage."
+}
+```
+
+The reserved `final_output` artifact cannot be deleted and returns HTTP `400`. A missing run returns HTTP `404`.
+
+### CORS
+
+The backend currently enables all origins, methods, and headers to support local Streamlit/Vite-style clients. This is convenient for development but should be narrowed to known frontend origins before production deployment.
+
+## Persistence and generated files
+
+The SQLite database is `backend/db/mindmesh.db`. The `blueprints` table stores:
+
+- Numeric database ID
+- Unique `run_id`
+- Creation timestamp
+- All six request inputs
+- Markdown and HTML content
+- Status
+
+The filesystem copy in `backend/outputs` is intentionally maintained as a fallback/export path:
+
+```text
+backend/outputs/
+├── <run_id>.md
+├── <run_id>.html
+├── final_output.md
+└── final_output.html
+```
+
+The database module initializes the schema on import and can backfill Markdown files that exist without database rows. Treat the local database and output directory as application data; back them up or replace them with managed storage for a multi-instance deployment.
+
+## Configuration reference
+
+All backend settings are loaded from `backend/.env` through `pydantic-settings`.
+
+| Variable | Required | Default/example | Purpose |
+| --- | --- | --- | --- |
+| `APP_NAME` | No | `MindMesh API` | FastAPI title |
+| `GEMINI_API_KEY_BA` | Yes | placeholder | Business Analyst credential |
+| `GEMINI_API_KEY_SA` | Yes | placeholder | Solution Architect credential |
+| `GEMINI_API_KEY_TA` | Yes | placeholder | Technology Advisor credential |
+| `GEMINI_API_KEY_DP` | Yes | placeholder | Delivery Planner credential |
+| `GEMINI_API_KEY_RW` | Yes | placeholder | Report Writer credential |
+| `GEMINI_API_KEY_EV` | Yes | placeholder | Evaluator credential |
+| `BA_MODEL` | Yes | Gemini model name | Business Analyst model |
+| `SA_MODEL` | Yes | Gemini model name | Solution Architect model |
+| `TA_MODEL` | Yes | Gemini model name | Technology Advisor model |
+| `DP_MODEL` | Yes | Gemini model name | Delivery Planner model |
+| `RW_MODEL` | Yes | Gemini model name | Report Writer model |
+| `EVALUATION_MODEL` | Yes | Gemini model name | Evaluator model |
+| `SERPER_API_KEY` | Yes | placeholder | Serper search tool credential |
+| `MAX_AGENT_RETRIES` | No | `2` | Maximum remediation retries per evaluated step |
+| `ENABLE_EVALUATION` | No | `true` | Enables evaluator quality gates |
+| `EVALUATION_THRESHOLD` | No | `0.70` | Minimum score required to pass |
+| `AGENT_TIMEOUT_SECONDS` | No | `120` | Configured agent runtime budget |
+| `LOG_LEVEL` | No | `INFO` | Application logging setting |
+
+## Development notes
+
+### Adding or changing an agent
+
+An agent is split into three concerns under `backend/src/agents/<agent_name>/`:
+
+- `agent.py`: CrewAI `Agent` construction and model/tool wiring
+- `prompt.py`: role-specific behavior and output guidance
+- `task.py`: task inputs, expected output, and context dependencies
+
+After adding an agent, update the crew ordering in `src/crew.py`, the streaming pipeline in `src/pipeline.py`, the frontend metadata in `frontend/constants.py`, and the event rendering logic in `frontend/views/execution_view.py`.
+
+### Changing the report contract
+
+The report structure is centralized in `src/blueprint_builder.py`. If headings change, update the corresponding extraction patterns in:
+
+- `backend/src/utils/section_parser.py`
+- `frontend/views/dashboard_view.py`
+
+This keeps API `sections`, dashboard tabs, and generated Markdown aligned.
+
+### API exploration
+
+FastAPI generates the current runtime contract:
+
+```text
+http://localhost:8000/docs
+http://localhost:8000/openapi.json
+```
+
+Use these endpoints as the final authority when the implementation and this document diverge.
+
+## Troubleshooting
+
+### Frontend says “Backend unreachable”
+
+1. Confirm the backend terminal is running.
+2. Open `http://localhost:8000/health`.
+3. Confirm the frontend is using the same host/port configured in `frontend/app.py`.
+4. Check that Windows Firewall or another process is not blocking port 8000.
+
+### Backend fails while importing settings
+
+`src/config.py` requires all API-key and model variables without defaults. Ensure `backend/.env` exists and contains every required variable from `backend/.env.example`.
+
+### Blueprint generation fails with a provider error
+
+Check:
+
+- Provider API keys are valid and have quota.
+- Model names are supported by the installed CrewAI/LiteLLM integration.
+- The machine has outbound internet access.
+- Serper is available if an agent invokes web search.
+- The terminal output for the underlying CrewAI/provider exception.
+
+The API returns a `500` for synchronous failures and emits an SSE `error` event for streaming failures.
+
+### History is empty or a report cannot be reopened
+
+The backend uses paths relative to its working directory for the API's filesystem fallback. Start the backend from the `backend` directory using the documented command. Also confirm that `backend/db/mindmesh.db` and `backend/outputs` are writable.
+
+### The generated report is slow
+
+Five agents may each invoke an LLM and an evaluator may add another LLM call after each step. Reduce `MAX_AGENT_RETRIES`, temporarily set `ENABLE_EVALUATION=false` for local diagnosis, or use smaller/faster provider models. Re-enable evaluation before relying on results.
+
+## Limitations and production considerations
+
+- **Local-only persistence:** SQLite and local files are suitable for a single development instance, not concurrent horizontally scaled workers.
+- **Open CORS policy:** Replace `allow_origins=["*"]` with an explicit allowlist.
+- **Secrets:** Store provider keys in a secret manager in production; never place them in source control or frontend code.
+- **Authentication:** The current API has no authentication or authorization layer.
+- **Rate limiting:** The current API does not enforce per-user or per-IP generation quotas.
+- **Long-running requests:** LLM generation can take minutes. Production deployments should consider a job queue, durable job state, worker processes, and reconnectable progress streams.
+- **Observability:** Add structured logs, correlation IDs, provider metrics, token/cost tracking, and error monitoring before operating at scale.
+- **Output validation:** Generated architecture should be reviewed by qualified engineers and validated with threat modeling, load testing, cost estimation, and jurisdiction-specific compliance checks.
+- **Provider coupling:** The current implementation constructs Gemini-backed LLMs and uses Serper; swapping providers requires changes to model configuration and possibly the CrewAI integration.
+- **Data handling:** User business ideas and generated reports are sent to configured external model/search providers. Review provider retention, privacy, and residency terms before using sensitive or regulated information.
 
 ## License
 
-SolutionForge AI is intended to be released under the [MIT License](LICENSE). Add the repository's `LICENSE` file before public release if it is not already present.
+No license file is currently included in the repository. Add an explicit license before distributing MindMesh outside the owning organization.

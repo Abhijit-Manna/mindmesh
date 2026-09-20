@@ -221,3 +221,6 @@ __marimo__/
 
 
 .idea/
+outputs/
+.db
+db/
