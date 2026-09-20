@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from src.crew import create_crew, run_agents_step_by_step, build_master_blueprint
 from src.utils.output_file import save_output
 from src.utils.html_converter import markdown_to_html
+from src.utils.section_parser import extract_sections_from_markdown
 from src.db import (
     save_blueprint_record,
     get_blueprint_history,
@@ -179,12 +180,16 @@ async def get_blueprint(run_id: str):
     # First attempt from SQLite DB
     db_record = get_blueprint_by_run_id(run_id)
     if db_record:
+        md_content = db_record.get("markdown_content", "")
+        html_content = db_record.get("html_content", "")
+        sections = extract_sections_from_markdown(md_content)
         return {
             "run_id": run_id,
             "status": db_record.get("status", "completed"),
-            "result": db_record.get("html_content", ""),
-            "markdown": db_record.get("markdown_content", ""),
-            "html": db_record.get("html_content", ""),
+            "result": html_content,
+            "markdown": md_content,
+            "html": html_content,
+            "sections": sections,
             "created_at": db_record.get("created_at", ""),
             "business_idea": db_record.get("business_idea", ""),
             "technology_preference": db_record.get("technology_preference", ""),
@@ -204,13 +209,15 @@ async def get_blueprint(run_id: str):
 
     html_content = html_file.read_text(encoding="utf-8") if html_file.exists() else ""
     md_content = md_file.read_text(encoding="utf-8") if md_file.exists() else ""
+    sections = extract_sections_from_markdown(md_content)
 
     return {
         "run_id": run_id,
         "status": "completed",
         "result": html_content,
         "markdown": md_content,
-        "html": html_content
+        "html": html_content,
+        "sections": sections
     }
 
 

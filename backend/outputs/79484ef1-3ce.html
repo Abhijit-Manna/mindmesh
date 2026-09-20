@@ -598,57 +598,6 @@ i want to build a recharge platform B2B platform</p>
 <li><strong>Why:</strong> Unit tests (JUnit/Mockito) are non-negotiable for wallet calculations. Cypress provides automated End-to-End (E2E) testing for the critical "Recharge" flow, preventing regressions.</li>
 <li><strong>Timeline Impact:</strong> Automated testing is the only way to meet the 4-month goal while ensuring stability.</li>
 </ul>
-<pre><code>                            TRAFFIC FLOW THROUGHPUT &amp; SIZING
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ Peak Ingress: 2,500 req/sec                                                             │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                         │
-│  [ AWS CloudFront / WAF ]                                                               │
-│    └── Edge Latency Overhead: &lt; 5ms                                                     │
-│                                                                                         │
-│  [ Envoy Gateway / ALB ]                                                                │
-│    └── Multiplexes 2,500 HTTP/2 Streams -&gt; Internal gRPC Mesh                          │
-│                                                                                         │
-│  [ Go Microservices on EKS ]                                                            │
-│    ├── 2,500 RPS / 300 RPS per Pod = ~9 Microservice Pods (Min Baseline: 12 Pods)     │
-│    └── CPU Allocation: 0.5 vCPU, Memory: 128MB per Pod                                 │
-│                                                                                         │
-│  [ Amazon Aurora PostgreSQL Serverless v2 ]                                             │
-│    ├── Read Load (2,000 RPS): Offloaded via ElastiCache (~85% Hit Rate -&gt; 300 DB RPS)   │
-│    ├── Write Load (500 RPS): Handled directly by Aurora Primary                         │
-│    └── Required Capacity: 8 - 16 ACUs (Scales automatically up to 128 ACUs)             │
-│                                                                                         │
-│  [ Amazon ElastiCache Valkey Cluster ]                                                  │
-│    ├── Throughput Capacity: &gt; 50,000 ops/sec per Node                                  │
-│    └── Memory Requirement: 15 GB Provisioned (cache.m6g.large Multi-AZ)                 │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-</code></pre>
-<h4 id="horizontal-pod-autoscaling-hpa-policy">Horizontal Pod Autoscaling (HPA) Policy</h4>
-<p>Go microservices on EKS are configured with custom Kubernetes metric auto-scalers (KEDA):</p>
-<pre><code class="language-yaml">apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
-metadata:
-  name: user-service-autoscaler
-  namespace: mindmesh
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: user-service
-  minReplicaCount: 3
-  maxReplicaCount: 30
-  triggers:
-  - type: cpu
-    metadata:
-      type: Utilization
-      value: &quot;65&quot;
-  - type: prometheus
-    metadata:
-      serverAddress: http://prometheus-k8s.monitoring:9090
-      metricName: grpc_server_requests_per_second
-      query: sum(rate(grpc_server_handled_total{job=&quot;user-service&quot;}[1m]))
-      threshold: &quot;300&quot;
-</code></pre>
 <hr />
 <h3 id="advisors-summary-for-mvp-success">Advisor’s Summary for MVP Success</h3>
 <ul>

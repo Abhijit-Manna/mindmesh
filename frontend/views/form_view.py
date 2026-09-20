@@ -4,6 +4,7 @@ MindMesh Frontend - Form View Component
 
 import time
 import streamlit as st
+import streamlit.components.v1 as components
 from constants import (
     PRESET_TEMPLATES,
     TECH_STACK_OPTIONS,
@@ -15,7 +16,8 @@ from constants import (
 
 def render_form_view():
     """Render the initial project parameters input form."""
-    st.subheader(" Define Solution Parameters")
+    st.markdown("<div id='define-solution-parameters'></div>", unsafe_allow_html=True)
+    st.subheader("Define Solution Parameters")
     st.caption("Select a preset template or configure your custom technical parameters.")
 
     # Preset Quick-Fill Buttons
@@ -94,7 +96,33 @@ def render_form_view():
             )
 
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-        submit_btn = st.form_submit_button("⚡ Generate Architecture Blueprint", type="primary", use_container_width=True)
+        submit_btn = st.form_submit_button("Generate Architecture Blueprint", type="primary", use_container_width=True)
+
+    # Attach interactive button loading spinner on click
+    components.html("""
+    <script>
+    const attachButtonSpinner = () => {
+        try {
+            const doc = window.parent.document;
+            const btn = doc.querySelector('[data-testid="stFormSubmitButton"] button');
+            if (btn && !btn.dataset.hasSpinner) {
+                btn.dataset.hasSpinner = "true";
+                btn.addEventListener('click', () => {
+                    const textContainer = btn.querySelector('p') || btn.querySelector('span') || btn;
+                    if (textContainer && !textContainer.querySelector('.btn-spinner-icon')) {
+                        const spinner = document.createElement('span');
+                        spinner.className = 'btn-spinner-icon';
+                        spinner.setAttribute('style', 'display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,0.35); border-top-color:#ffffff; border-radius:50%; margin-right:8px; animation:spin 0.6s linear infinite; vertical-align:-1px;');
+                        textContainer.prepend(spinner);
+                    }
+                });
+            }
+        } catch (e) {}
+    };
+    attachButtonSpinner();
+    setInterval(attachButtonSpinner, 400);
+    </script>
+    """, height=0, width=0)
 
     if submit_btn:
         errors = []
@@ -121,7 +149,7 @@ def render_form_view():
                 "delivery_timeline_months": int(delivery_timeline_months),
                 "data_hosting_country": data_hosting_country
             }
-            with st.spinner("Initializing multi-agent pipeline..."):
+            with st.spinner("Loading architecture synthesis engine..."):
                 time.sleep(0.3)
                 st.session_state.execution_state = "running"
                 st.rerun()
