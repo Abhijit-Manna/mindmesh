@@ -30,7 +30,15 @@ Data Hosting Country / Region: {data_hosting_country}
 4. Storage, Cache & Data Consistency Model
 5. Security Perimeter, IAM & Data Residency Controls (for {data_hosting_country})
 6. Resilience, Scalability & Failover Patterns (handling {expected_daily_traffic})
-7. Detailed High-Level ASCII System Architecture Diagram (clear, clean text diagram)
+7. Detailed High-Level Mermaid System Architecture Diagram
+   - Use valid Mermaid syntax.
+   - Start with `flowchart TD`.
+   - Show the major components and their connections.
+   - Show important request/data flows.
+   - Keep the diagram consistent with the architecture.
+   - Do NOT generate ASCII art.
+   - Do NOT generate an image.
+   - Return valid Mermaid syntax for this section.
 8. Over-Engineering Safeguards & Deferred Architecture Patterns
 
 Build strictly upon the Business Analyst's requirements. Maintain high technical depth and architectural clarity.
@@ -41,7 +49,7 @@ Build strictly upon the Business Analyst's requirements. Maintain high technical
         expected_output=(
             "A comprehensive System Architecture Blueprint containing detailed component topologies, "
             "step-by-step data flows, security and data residency controls, resilience patterns, "
-            "and a clear ASCII system architecture diagram."
+            "and a valid Mermaid architecture diagram using flowchart TD syntax."
         ),
         agent=agent,
         context=[ba_task]

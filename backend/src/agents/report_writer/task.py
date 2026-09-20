@@ -33,20 +33,26 @@ The complete deliverables of the Business Analyst, Solution Architect, Technolog
 
 ================ DELIVERABLES REQUIRED ================
 1. Executive Solution Overview & Strategic Business Value Narrative
-2. Comprehensive Multi-Tier ASCII System Architecture Topology Diagram (Must be detailed, showing edge, gateway, services, caches, databases, queues, and third-party integrations)
+2. Architecture Topology Integration
+   - Do not generate a new architecture diagram.
+   - Use the Solution Architect's architecture as the authoritative system topology.
+   - Preserve any valid Mermaid architecture provided by the Solution Architect.
+   - Do not convert Mermaid into ASCII art.
+   - Do not generate an image.
 3. Cross-Discipline Technical Consistency & Harmonization Audit
 4. Data Residency, Security & Regulatory Compliance Verification (for {inputs.get('data_hosting_country', 'N/A')})
 5. Total Cost of Ownership (TCO) & Cloud Sizing Recommendations
 
-Provide deep, publication-grade analytical commentary and a clear ASCII architecture diagram.
+Provide deep, publication-grade analytical commentary while preserving the authoritative architecture produced by the Solution Architect.
 """
 
     return Task(
         description=description,
         expected_output=(
             "An executive-level Architectural Synthesis and Governance document containing "
-            "an extensive multi-tier ASCII architecture diagram, technical consistency review, "
-            "data residency verification, and TCO optimization strategies."
+            "executive synthesis, architecture integration, technical consistency review, "
+            "data residency verification, and TCO optimization strategies. "
+            "The Solution Architect's Mermaid architecture must remain authoritative."
         ),
         agent=agent,
         context=context_tasks,

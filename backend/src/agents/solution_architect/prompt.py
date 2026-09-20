@@ -31,8 +31,18 @@ YOU MUST PRODUCE:
    - Horizontal auto-scaling triggers based on expected daily traffic.
    - Fault-tolerance: Circuit breaker, Retry with Exponential Backoff, Dead-Letter Queues (DLQ), Rate Limiting.
 
-7. High-Level ASCII System Architecture Diagram
-   - A detailed, clean ASCII/text diagram illustrating Client -> Edge/CDN -> API Gateway -> Core Services -> Caches -> Databases -> External Services.
+7. High-Level Mermaid System Architecture Diagram
+   - Generate a clear, production-grade architecture diagram using valid Mermaid syntax.
+   - The diagram must start with `flowchart TD`.
+   - Show major components, responsibilities, and request/data flows.
+   - Include relevant components such as:
+     Client → CDN/Edge → API Gateway → Core Services → Cache → Database → External/Async Services.
+   - Keep the diagram consistent with the architecture designed in the previous sections.
+   - Use clear and readable node names.
+   - Do NOT generate ASCII art.
+   - Do NOT generate an image.
+   - For this section, output valid Mermaid code.
+
 
 8. Architectural Trade-offs & Anti-Patterns Avoided
    - Explicitly document what architecture patterns were avoided to prevent over-engineering for the MVP timeline.
