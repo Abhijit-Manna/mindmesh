@@ -44,7 +44,8 @@ TECH_STACK_OPTIONS = [
     "Open-Source Stack ",
     "Enterprise Stack ",
     "Microservices Mesh ",
-    "Serverless Ecosystem "
+    "Serverless Ecosystem ",
+    "No Preference"
 ]
 
 CLOUD_OPTIONS = [
