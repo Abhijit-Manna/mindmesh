@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.crew import create_crew
@@ -7,17 +8,26 @@ from src.routes.blueprint import BlueprintRequest
 from src.utils.output_file import save_output
 from src.utils.html_converter import markdown_to_html
 
-app = FastAPI(title=settings.APP_NAME)
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="MindMesh Multi-Agent Solution Architecture Engine API",
+    version="1.0.0"
+)
 
+# Enable CORS for frontend clients (Streamlit on port 8501, Vite, etc.)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Route registrations
 app.include_router(health.router)
+app.include_router(health.router, prefix="/api/v1")
 app.include_router(blueprint.router, prefix="/api/v1")
 
-# -------------------------------------------------------------------------
-    # LOCAL CLI TEST RUNNER
-    # This block is ONLY executed when running `python main.py` directly.
-    # It is ignored when launching the FastAPI server (`fastapi dev main.py`).
-    # Use this to quickly verify CrewAI agent workflows without Uvicorn.
-    # -------------------------------------------------------------------------
 
 def main():
     print("[1/3] Preparing test payload...")
@@ -45,4 +55,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()
