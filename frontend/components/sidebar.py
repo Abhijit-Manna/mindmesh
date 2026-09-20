@@ -46,15 +46,15 @@ def render_sidebar_history(api_client: APIClient, is_healthy: bool):
                             <div class="history-title">{display_title}</div>
                             <div class="history-meta">
                                 <span>{created or 'Recent'}</span>
-                                <span style="color:#6366f1; font-weight:600; font-size:0.74rem;">{tag_text}</span>
+                                <span class="history-tag">{tag_text}</span>
                             </div>
-                            <div style="font-size:0.70rem; color:#94a3b8; font-family:monospace;">ID: {r_id}</div>
+                            <div style="font-size:0.70rem; color:#64748b; font-family:monospace;">ID: {r_id}</div>
                         </div>
                         """, unsafe_allow_html=True)
 
-                        c1, c2 = st.columns([3, 1])
+                        c1, c2 = st.columns([2.5, 1.5])
                         with c1:
-                            if st.button("Open", key=f"sb_load_{r_id}", use_container_width=True):
+                            if st.button("Open", key=f"sb_load_{r_id}", type="primary", use_container_width=True):
                                 g_success, g_data, g_err = api_client.get_blueprint(r_id)
                                 if g_success:
                                     st.session_state.blueprint_result = g_data
@@ -63,9 +63,13 @@ def render_sidebar_history(api_client: APIClient, is_healthy: bool):
                                 else:
                                     st.error(g_err)
                         with c2:
-                            if st.button("Delete", key=f"sb_del_{r_id}", use_container_width=True):
+                            if st.button("Delete", key=f"sb_del_{r_id}", type="secondary", use_container_width=True):
                                 d_success, _, d_err = api_client.delete_blueprint(r_id)
                                 if d_success:
+                                    # If currently viewing the deleted blueprint, return to idle
+                                    if st.session_state.get("blueprint_result", {}).get("run_id") == r_id:
+                                        st.session_state.execution_state = "idle"
+                                        st.session_state.blueprint_result = None
                                     st.toast("Blueprint deleted.")
                                     time.sleep(0.3)
                                     st.rerun()

@@ -41,10 +41,10 @@ ARCHITECTURE_INSIGHTS = [
 
 TECH_STACK_OPTIONS = [
     "-- Select Technology Stack --",
-    "Open-Source Stack (Python FastAPI / Node.js + React + PostgreSQL)",
-    "Enterprise Stack (Java Spring Boot / C# .NET Core + Angular)",
-    "Microservices Mesh (Go Microservices + gRPC + React)",
-    "Serverless Ecosystem (TypeScript + AWS Lambda + DynamoDB)"
+    "Open-Source Stack ",
+    "Enterprise Stack ",
+    "Microservices Mesh ",
+    "Serverless Ecosystem "
 ]
 
 CLOUD_OPTIONS = [

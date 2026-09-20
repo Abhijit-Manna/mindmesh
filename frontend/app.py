@@ -10,8 +10,15 @@ Modular Entry Point coordinating:
 
 import streamlit as st
 
+import importlib
 from api_client import APIClient
-from styles import CUSTOM_CSS
+import styles
+try:
+    importlib.reload(styles)
+except Exception:
+    pass
+
+from styles import CUSTOM_CSS, get_custom_css
 from components.header import render_hero_header
 from components.sidebar import render_sidebar_history
 from views.form_view import render_form_view
@@ -21,12 +28,13 @@ from views.dashboard_view import render_dashboard_view
 # --- Streamlit Page Configuration ---
 st.set_page_config(
     page_title="MindMesh — AI Architecture Blueprint Engine",
-    page_icon="",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Apply global CSS
+# Apply pure light theme CSS
+st.session_state.theme = "Light"
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # --- Session State Initialization ---
