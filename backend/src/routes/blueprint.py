@@ -124,19 +124,17 @@ async def create_blueprint(payload: BlueprintRequest):
         crew = create_crew(**payload_dict)
         result = await crew.kickoff_async()
         
-        if hasattr(result, "tasks_output") and len(result.tasks_output) >= 5:
+        if hasattr(result, "tasks_output") and len(result.tasks_output) >= 4:
             ba_out = result.tasks_output[0].raw
             sa_out = result.tasks_output[1].raw
             ta_out = result.tasks_output[2].raw
-            do_out = result.tasks_output[3].raw
-            dp_out = result.tasks_output[4].raw
-            rw_out = result.tasks_output[5].raw if len(result.tasks_output) > 5 else ""
+            dp_out = result.tasks_output[3].raw
+            rw_out = result.tasks_output[4].raw if len(result.tasks_output) > 4 else ""
             final_output = build_master_blueprint(
                 inputs=payload_dict,
                 ba_output=ba_out,
                 sa_output=sa_out,
                 ta_output=ta_out,
-                do_output=do_out,
                 dp_output=dp_out,
                 rw_output=rw_out,
                 run_id=run_id

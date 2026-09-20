@@ -47,12 +47,6 @@ def get_dp_llm() -> LLM:
     )
 
 
-def get_do_llm() -> LLM:
-    return get_llm(
-        api_key=os.getenv("GEMINI_API_KEY_DO", settings.GEMINI_API_KEY_DO),
-        model=settings.DO_MODEL,
-    )
-
 
 def get_rw_llm() -> LLM:
     return get_llm(

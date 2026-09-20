@@ -12,7 +12,6 @@ from crewai import Crew, Process
 from src.agents.business_analyst.task import create_business_analyst_task
 from src.agents.solution_architect.task import create_solution_architect_task
 from src.agents.technology_advisor.task import create_technology_advisor_task
-from src.agents.devops_architect.task import create_devops_architect_task
 from src.agents.delivery_planner.task import create_delivery_planner_task
 from src.agents.report_writer.task import create_report_writer_task
 
@@ -45,9 +44,8 @@ def create_crew(
     1. Business Analyst (Scope, functional & non-functional requirements)
     2. Solution Architect (High-level architecture, components, data flows)
     3. Technology Advisor (Tech stack selection & architectural trade-offs)
-    4. DevOps Architect (Cloud infrastructure, CI/CD pipelines & release strategy)
-    5. Delivery Planner (Implementation roadmap, milestones & risks)
-    6. Report Writer (Executive architecture synthesis & blueprint compilation)
+    4. Delivery Planner (Implementation roadmap, milestones & risks)
+    5. Report Writer (Executive architecture synthesis & blueprint compilation)
     """
     inputs: Dict[str, Any] = {
         "business_idea": business_idea,
@@ -89,34 +87,21 @@ def create_crew(
         sa_task=sa_task,
     )
 
-    # 4. DevOps Architect task
-    do_task = create_devops_architect_task(
-        cloud_preference=cloud_preference,
-        data_hosting_country=data_hosting_country,
-        expected_daily_traffic=expected_daily_traffic,
-        delivery_timeline_months=delivery_timeline_months,
-        ba_task=ba_task,
-        sa_task=sa_task,
-        ta_task=ta_task,
-    )
-
-    # 5. Delivery Planner task
+    # 4. Delivery Planner task
     dp_task = create_delivery_planner_task(
         delivery_timeline_months=delivery_timeline_months,
         ba_task=ba_task,
         sa_task=sa_task,
         ta_task=ta_task,
-        do_task=do_task,
     )
 
-    # 6. Report Writer task
+    # 5. Report Writer task
     rw_task = create_report_writer_task(
         inputs=inputs,
         ba_task=ba_task,
         sa_task=sa_task,
         ta_task=ta_task,
         dp_task=dp_task,
-        do_task=do_task,
     )
 
     crew = Crew(
@@ -124,7 +109,6 @@ def create_crew(
             ba_task.agent,
             sa_task.agent,
             ta_task.agent,
-            do_task.agent,
             dp_task.agent,
             rw_task.agent,
         ],
@@ -132,7 +116,6 @@ def create_crew(
             ba_task,
             sa_task,
             ta_task,
-            do_task,
             dp_task,
             rw_task,
         ],

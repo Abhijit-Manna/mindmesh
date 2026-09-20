@@ -1,4 +1,3 @@
-from typing import Optional
 from crewai import Task
 
 from .agent import create_delivery_planner
@@ -9,18 +8,15 @@ def create_delivery_planner_task(
     ba_task: Task,
     sa_task: Task,
     ta_task: Task,
-    do_task: Optional[Task] = None,
 ) -> Task:
     agent = create_delivery_planner()
 
     context_tasks = [ba_task, sa_task, ta_task]
-    if do_task:
-        context_tasks.append(do_task)
 
     description = f"""
 Create an exhaustive, production-ready Implementation and Delivery Plan for the system.
 
-The Business Analyst, Solution Architect, Technology Advisor, and DevOps Architect deliverables
+The Business Analyst, Solution Architect, and Technology Advisor deliverables
 are provided as upstream context.
 
 ================ HARD CONSTRAINTS ================

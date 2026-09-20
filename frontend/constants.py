@@ -80,7 +80,6 @@ AGENT_METADATA = [
     {"name": "Business Analyst", "icon": "📋", "role": "Requirements & MVP Scope"},
     {"name": "Solution Architect", "icon": "🏗️", "role": "System Architecture & Components"},
     {"name": "Technology Advisor", "icon": "⚡", "role": "Tech Stack & Trade-Offs"},
-    {"name": "DevOps Architect", "icon": "☁️", "role": "Cloud Infra & CI/CD Pipeline"},
     {"name": "Delivery Planner", "icon": "🚀", "role": "Delivery Roadmap & Milestones"},
     {"name": "Report Writer", "icon": "✍️", "role": "Master Blueprint Synthesis"}
 ]

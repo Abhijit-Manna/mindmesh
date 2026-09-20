@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     GEMINI_API_KEY_SA: str
     GEMINI_API_KEY_TA: str
     GEMINI_API_KEY_DP: str
-    GEMINI_API_KEY_DO: str
     GEMINI_API_KEY_RW: str
     GEMINI_API_KEY_EV: str
 
@@ -26,7 +25,6 @@ class Settings(BaseSettings):
     SA_MODEL: str
     TA_MODEL: str
     DP_MODEL: str
-    DO_MODEL: str
     RW_MODEL: str
 
     # ==========================================

@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from crewai import Task
 
 from .agent import create_report_writer
@@ -10,13 +10,10 @@ def create_report_writer_task(
     sa_task: Task,
     ta_task: Task,
     dp_task: Task,
-    do_task: Optional[Task] = None,
 ) -> Task:
     agent = create_report_writer()
 
     context_tasks = [ba_task, sa_task, ta_task, dp_task]
-    if do_task:
-        context_tasks.insert(3, do_task)
 
     description = f"""
 Perform an Executive Architecture Synthesis and Cross-Discipline Harmonization for the entire solution.
@@ -32,7 +29,7 @@ Delivery Timeline: {inputs.get('delivery_timeline_months', 6)} Months
 Data Hosting Country: {inputs.get('data_hosting_country', 'N/A')}
 
 ================ SPECIALIST DELIVERABLES ================
-The complete deliverables of the Business Analyst, Solution Architect, Technology Advisor, DevOps Architect, and Delivery Planner are provided as task context.
+The complete deliverables of the Business Analyst, Solution Architect, Technology Advisor, and Delivery Planner are provided as task context.
 
 ================ DELIVERABLES REQUIRED ================
 1. Executive Solution Overview & Strategic Business Value Narrative

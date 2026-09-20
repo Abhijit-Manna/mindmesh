@@ -8,7 +8,6 @@ def build_master_blueprint(
     sa_output: str,
     ta_output: str,
     dp_output: str,
-    do_output: str = "",
     rw_output: str = "",
     run_id: str = "run_master",
 ) -> str:
@@ -29,18 +28,6 @@ def build_master_blueprint(
 *Synthesized by Lead Solution Consultant & Technical Writer*
 
 {rw_output.strip()}
-"""
-
-    # Format DevOps section if present
-    devops_section = ""
-    if do_output.strip():
-        devops_section = f"""
----
-
-## Section 4: DevOps, Cloud Infrastructure & Deployment Architecture
-*Synthesized by DevOps Architect Agent*
-
-{do_output.strip()}
 """
 
     blueprint_md = f"""# MindMesh AI — Enterprise Solution Blueprint
@@ -76,10 +63,10 @@ def build_master_blueprint(
 *Synthesized by Technology Advisor Agent*
 
 {ta_output.strip()}
-{devops_section}
+
 ---
 
-## Section 5: Implementation Roadmap & Delivery Plan
+## Section 4: Implementation Roadmap & Delivery Plan
 *Synthesized by Delivery Planner Agent*
 
 {dp_output.strip()}

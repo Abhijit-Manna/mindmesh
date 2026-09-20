@@ -10,7 +10,6 @@ from src.utils.html_converter import markdown_to_html
 from src.agents.business_analyst.task import create_business_analyst_task
 from src.agents.solution_architect.task import create_solution_architect_task
 from src.agents.technology_advisor.task import create_technology_advisor_task
-from src.agents.devops_architect.task import create_devops_architect_task
 from src.agents.delivery_planner.task import create_delivery_planner_task
 from src.agents.report_writer.task import create_report_writer_task
 
@@ -132,7 +131,7 @@ async def run_agents_step_by_step(
     delivery_timeline_months = int(inputs.get("delivery_timeline_months", 6))
     data_hosting_country = inputs.get("data_hosting_country", "")
 
-    total_steps = 6
+    total_steps = 5
     eval_threshold = getattr(settings, "EVALUATION_THRESHOLD", 0.70)
     enable_eval = getattr(settings, "ENABLE_EVALUATION", True)
     max_retries = getattr(settings, "MAX_AGENT_RETRIES", 2)
@@ -172,7 +171,7 @@ async def run_agents_step_by_step(
                 start_msg="Analyzing business idea, identifying stakeholders, non-functional requirements, and core MVP scope...",
                 complete_msg="Business analysis and functional requirements established.",
                 start_pct=5,
-                complete_pct=20,
+                complete_pct=22,
                 event_queue=event_queue,
                 enable_eval=enable_eval,
                 eval_threshold=eval_threshold,
@@ -204,8 +203,8 @@ async def run_agents_step_by_step(
                 inputs=inputs,
                 start_msg="Designing component interaction diagrams, data flows, scalability patterns, and security perimeter...",
                 complete_msg="High-level architecture and system components finalized.",
-                start_pct=22,
-                complete_pct=38,
+                start_pct=24,
+                complete_pct=44,
                 event_queue=event_queue,
                 enable_eval=enable_eval,
                 eval_threshold=eval_threshold,
@@ -238,8 +237,8 @@ async def run_agents_step_by_step(
                 inputs=inputs,
                 start_msg="Evaluating technology stack trade-offs, databases, cloud services, and framework trade-offs...",
                 complete_msg="Technology recommendations and trade-off analysis completed.",
-                start_pct=40,
-                complete_pct=56,
+                start_pct=46,
+                complete_pct=66,
                 event_queue=event_queue,
                 enable_eval=enable_eval,
                 eval_threshold=eval_threshold,
@@ -250,41 +249,7 @@ async def run_agents_step_by_step(
             ta_task = make_ta_task()
 
             # -------------------------------------------------------------
-            # STEP 4: DEVOPS ARCHITECT
-            # -------------------------------------------------------------
-            def make_do_task():
-                return create_devops_architect_task(
-                    cloud_preference=cloud_preference,
-                    data_hosting_country=data_hosting_country,
-                    expected_daily_traffic=expected_daily_traffic,
-                    delivery_timeline_months=delivery_timeline_months,
-                    ba_task=ba_task,
-                    sa_task=sa_task,
-                    ta_task=ta_task,
-                )
-
-            do_output = await execute_step_with_eval(
-                agent_name="DevOps Architect",
-                role="Cloud Infrastructure & CI/CD Engineer",
-                step_num=4,
-                total_steps=total_steps,
-                task_factory_fn=make_do_task,
-                inputs=inputs,
-                start_msg="Designing cloud infrastructure, multi-stage environments, automated CI/CD pipelines, and zero-downtime release strategy...",
-                complete_msg="DevOps architecture, CI/CD automation, and release strategy finalized.",
-                start_pct=58,
-                complete_pct=72,
-                event_queue=event_queue,
-                enable_eval=enable_eval,
-                eval_threshold=eval_threshold,
-                max_retries=max_retries,
-            )
-
-            # Anchor task object for downstream agent context propagation
-            do_task = make_do_task()
-
-            # -------------------------------------------------------------
-            # STEP 5: DELIVERY PLANNER
+            # STEP 4: DELIVERY PLANNER
             # -------------------------------------------------------------
             def make_dp_task():
                 return create_delivery_planner_task(
@@ -292,19 +257,18 @@ async def run_agents_step_by_step(
                     ba_task=ba_task,
                     sa_task=sa_task,
                     ta_task=ta_task,
-                    do_task=do_task,
                 )
 
             dp_output = await execute_step_with_eval(
                 agent_name="Delivery Planner",
                 role="Delivery Roadmap & Milestones Planner",
-                step_num=5,
+                step_num=4,
                 total_steps=total_steps,
                 task_factory_fn=make_dp_task,
                 inputs=inputs,
                 start_msg="Synthesizing delivery workstreams, sprint milestones, team allocation, and risk mitigations...",
                 complete_msg="Delivery roadmap, milestones, and risk register complete.",
-                start_pct=74,
+                start_pct=68,
                 complete_pct=88,
                 event_queue=event_queue,
                 enable_eval=enable_eval,
@@ -316,15 +280,15 @@ async def run_agents_step_by_step(
             dp_task = make_dp_task()
 
             # -------------------------------------------------------------
-            # STEP 6: REPORT WRITER AGENT (Final Synthesis)
+            # STEP 5: REPORT WRITER AGENT (Final Synthesis)
             # -------------------------------------------------------------
             await event_queue.put({
                 "event": "agent_start",
                 "agent": "Report Writer",
-                "step": 6,
+                "step": 5,
                 "total": total_steps,
                 "role": "Lead Solution Consultant & Technical Writer",
-                "message": "Synthesizing all specialist findings into the authoritative 14-section Master Solution Blueprint...",
+                "message": "Synthesizing all specialist findings into the authoritative Master Solution Blueprint...",
                 "progress": 90,
             })
 
@@ -334,7 +298,6 @@ async def run_agents_step_by_step(
                 sa_task=sa_task,
                 ta_task=ta_task,
                 dp_task=dp_task,
-                do_task=do_task,
             )
 
             rw_crew = Crew(agents=[rw_task.agent], tasks=[rw_task], verbose=True)
@@ -347,7 +310,6 @@ async def run_agents_step_by_step(
                 ba_output=ba_output,
                 sa_output=sa_output,
                 ta_output=ta_output,
-                do_output=do_output,
                 dp_output=dp_output,
                 rw_output=rw_output,
                 run_id=run_id,
@@ -356,7 +318,7 @@ async def run_agents_step_by_step(
             await event_queue.put({
                 "event": "agent_complete",
                 "agent": "Report Writer",
-                "step": 6,
+                "step": 5,
                 "total": total_steps,
                 "output": rw_output,
                 "message": "Executive architecture synthesis, system topology, and master blueprint compiled.",
@@ -377,7 +339,6 @@ async def run_agents_step_by_step(
                     "business_analyst": ba_output,
                     "solution_architect": sa_output,
                     "technology_advisor": ta_output,
-                    "devops_architect": do_output,
                     "delivery_planner": dp_output,
                     "report_writer": master_md,
                 },
