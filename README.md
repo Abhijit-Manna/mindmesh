@@ -30,12 +30,13 @@ The application is intended for product owners, founders, business analysts, sol
 7. [Running the application](#running-the-application)
 8. [Using the application](#using-the-application)
 9. [Multi-agent execution pipeline](#multi-agent-execution-pipeline)
-10. [API contract](#api-contract)
-11. [Persistence and generated files](#persistence-and-generated-files)
-12. [Configuration reference](#configuration-reference)
-13. [Development notes](#development-notes)
-14. [Troubleshooting](#troubleshooting)
-15. [Limitations and production considerations](#limitations-and-production-considerations)
+10. [Experience memory](#experience-memory)
+11. [API contract](#api-contract)
+12. [Persistence and generated files](#persistence-and-generated-files)
+13. [Configuration reference](#configuration-reference)
+14. [Development notes](#development-notes)
+15. [Troubleshooting](#troubleshooting)
+16. [Limitations and production considerations](#limitations-and-production-considerations)
 
 ---
 
@@ -60,22 +61,34 @@ The frontend defaults to `http://localhost:8000` for the backend. The backend ex
 flowchart LR
     U[User] --> S[Streamlit UI<br/>frontend/app.py]
     S -->|HTTP JSON / SSE| F[FastAPI API<br/>backend/main.py]
-    F --> P[Sequential pipeline]
-    P --> BA[Business Analyst]
-    BA --> SA[Solution Architect]
-    SA --> TA[Technology Advisor]
-    TA --> DP[Delivery Planner]
+    F --> R[Experience Retriever]
+    R -->|top 3 per specialist| P[Sequential CrewAI pipeline]
+    P --> BA[Business Analyst<br/>+ BA memory]
+    BA --> E1[Evaluator]
+    E1 -->|pass or final retry| X1[Experience Extractor]
+    X1 --> ES[(Experience Store<br/>SQLite)]
+    BA --> SA[Solution Architect<br/>+ SA memory]
+    SA --> E2[Evaluator]
+    E2 -->|pass or final retry| X2[Experience Extractor]
+    X2 --> ES
+    SA --> TA[Technology Advisor<br/>+ TA memory]
+    TA --> E3[Evaluator]
+    E3 -->|pass or final retry| X3[Experience Extractor]
+    X3 --> ES
+    TA --> DP[Delivery Planner<br/>+ DP memory]
+    DP --> E4[Evaluator]
+    E4 -->|pass or final retry| X4[Experience Extractor]
+    X4 --> ES
     DP --> RW[Report Writer]
-    BA -. evaluation .-> EV[Evaluator quality gate]
-    SA -. evaluation .-> EV
-    TA -. evaluation .-> EV
-    DP -. evaluation .-> EV
     RW --> B[Master blueprint builder]
     B --> H[Markdown + HTML]
-    H --> DB[(SQLite<br/>backend/db/mindmesh.db)]
+    H --> BS[(Blueprint history<br/>SQLite)]
     H --> O[backend/outputs]
-    F -->|history / retrieve / delete| DB
+    F -->|history / retrieve / delete| BS
+    ES -. future runs .-> R
 ```
+
+The diagram represents the implemented learning loop: an initial run has no (or few) memories; each evaluated specialist result becomes a structured experience; later runs retrieve relevant experiences and inject them into specialist prompts. Memory is advisory context, not an automatic decision override.
 
 ### Runtime request flow
 
@@ -84,22 +97,26 @@ sequenceDiagram
     participant Browser as User browser
     participant UI as Streamlit frontend
     participant API as FastAPI backend
+    participant Memory as Experience retriever/store
     participant Crew as CrewAI agents
     participant Eval as Evaluator
     participant Store as SQLite/filesystem
 
     Browser->>UI: Submit six blueprint parameters
     UI->>API: POST /api/v1/blueprints/stream
+    API->>Memory: Retrieve top 3 memories per specialist
     API-->>UI: init SSE event
-    loop Five sequential agents
+    loop Business Analyst, Solution Architect, Technology Advisor, Delivery Planner
         API->>Crew: Execute specialist task
         Crew->>Eval: Evaluate generated deliverable
         Eval-->>API: score, pass/fail, critique
+        API->>Memory: Extract and save evaluated experience
         API-->>UI: agent_start/evaluation/agent_complete
     end
+    API->>Crew: Execute Report Writer with upstream task context
     API->>API: Build canonical 14-section Markdown
     API->>API: Convert Markdown to HTML
-    API->>Store: Save record and .md/.html artifacts
+    API->>Store: Save blueprint record and .md/.html artifacts
     API-->>UI: complete SSE event
     UI-->>Browser: Render tabs and download action
 ```
@@ -112,7 +129,7 @@ sequenceDiagram
 | Backend | `backend/` | `http://localhost:8000` | FastAPI routes, agent orchestration, evaluation, persistence |
 | LLM providers | Configured externally | External API | Generate specialist and evaluation responses |
 | Search provider | Serper.dev | External API | Web search tool available to specialist agents |
-| Local storage | `backend/db/`, `backend/outputs/` | Local filesystem | Blueprint history and exported artifacts |
+| Local storage | `backend/db/`, `backend/outputs/` | Local filesystem | Blueprint history, accumulated experiences, and exported artifacts |
 
 ## Technology stack
 
@@ -133,6 +150,7 @@ sequenceDiagram
 - **Google Gemini through CrewAI/LiteLLM integration** for agent generation
 - **CrewAI Tools / SerperDevTool** for web search
 - **SQLite** through Python's `sqlite3` module for history
+- Deterministic structured experience memory for cross-run reuse
 - **Markdown** conversion to downloadable HTML
 
 ### Workspace and dependency management
@@ -168,6 +186,11 @@ mindmesh/
 │   │   ├── pipeline.py         # Streaming execution and evaluation gates
 │   │   ├── evaluation.py       # Evaluator invocation and score parsing
 │   │   ├── blueprint_builder.py# Canonical 14-section report composition
+│   │   ├── memory/
+│   │   │   ├── models.py       # Experience dataclass
+│   │   │   ├── experience_retriever.py # Structured relevance scoring
+│   │   │   ├── experience_extractor.py # Evaluated output to experience
+│   │   │   └── experience_store.py # Experience SQLite CRUD
 │   │   ├── llm.py              # Per-agent model/key construction
 │   │   ├── tools.py            # Shared Serper search tool
 │   │   ├── db.py               # SQLite schema and CRUD/history sync
@@ -317,19 +340,107 @@ The dashboard exposes the full HTML report and tabs for Business Analysis, Syste
 
 ## Multi-agent execution pipeline
 
-The standard crew in `backend/src/crew.py` is sequential. Each downstream task receives the relevant upstream task context:
+The standard crew in `backend/src/crew.py` is sequential. The streaming implementation in `backend/src/pipeline.py` adds an experience-memory layer around the first four specialist stages. Each downstream task also receives the relevant upstream CrewAI task context:
 
 | Order | Agent | Primary responsibility |
 | --- | --- | --- |
-| 1 | Business Analyst | Stakeholders, goals, functional requirements, non-functional requirements, MVP scope |
-| 2 | Solution Architect | Components, data flows, security perimeter, scalability, architecture topology |
-| 3 | Technology Advisor | Technology choices, alternatives, trade-offs, operational implications |
-| 4 | Delivery Planner | Workstreams, milestones, team shape, effort, risks, testing and release plan |
-| 5 | Report Writer | Cross-discipline synthesis and authoritative executive blueprint |
+| 1 | Business Analyst | Stakeholders, goals, functional requirements, non-functional requirements, MVP scope; receives retrieved BA memories |
+| 2 | Solution Architect | Components, data flows, security perimeter, scalability, architecture topology; receives retrieved SA memories and BA task context |
+| 3 | Technology Advisor | Technology choices, alternatives, trade-offs, operational implications; receives retrieved TA memories plus BA/SA task context |
+| 4 | Delivery Planner | Workstreams, milestones, team shape, effort, risks, testing and release plan; receives retrieved DP memories plus upstream task context |
+| 5 | Report Writer | Cross-discipline synthesis and authoritative executive blueprint; receives the upstream specialist task context |
 
-When enabled, the evaluator runs after each specialist deliverable. If the score is below `EVALUATION_THRESHOLD`, the pipeline retries the agent up to `MAX_AGENT_RETRIES` times. The UI receives `evaluation_start`, `evaluation`, and `agent_retry` events for this quality gate.
+For stages 1–4, the evaluator runs after each specialist deliverable when `ENABLE_EVALUATION=true`. If the score is below `EVALUATION_THRESHOLD`, the pipeline retries the agent up to `MAX_AGENT_RETRIES` times and appends evaluator remediation guidance to the task description. When a specialist passes, or when its final permitted retry is reached, the result is converted into an experience and saved to SQLite. The Report Writer is not independently evaluated or stored as an experience in the current implementation.
 
 The final report is assembled by `build_master_blueprint`; it does not simply concatenate raw agent responses. Topic-specific extraction routes content into the 14 stable headings and converts the result to HTML.
+
+## Experience memory
+
+MindMesh implements a persistent, per-agent experience loop:
+
+```text
+Run 1
+  User input
+    -> retrieve relevant experiences (usually none)
+    -> BA -> evaluator -> extract/save BA experience
+    -> SA -> evaluator -> extract/save SA experience
+    -> TA -> evaluator -> extract/save TA experience
+    -> DP -> evaluator -> extract/save DP experience
+    -> Report Writer -> final blueprint
+
+Later run
+  User input
+    -> retrieve up to three relevant experiences for BA, SA, TA, and DP
+    -> inject each memory set into its matching task prompt
+    -> execute the same sequential pipeline
+    -> save new evaluated experiences
+    -> future runs have a larger memory pool
+```
+
+There is no special sixth-run code path: the sixth run behaves like every run after the first, except that more evaluated experiences may be available for retrieval. The quality of the retrieved context depends on the similarity of the current constraints and the scores/recency of stored lessons.
+
+### Retrieval behavior
+
+`backend/src/memory/experience_retriever.py` retrieves experiences for one agent at a time. It first loads candidate records for the matching `agent_name`, then applies deterministic structured scoring:
+
+- Exact cloud preference: +3; stored `No Preference`: +1
+- Technology preference substring match: +2
+- Exact data-hosting-country match: +2
+- Exact delivery-timeline match: +2; within two months: +1
+- Exact expected-traffic match: +2
+- Successful experience: +3; failed experience: -1
+- Evaluator score: added as a numeric tie-break/quality contribution
+
+Candidates are sorted by total score and the top three are formatted into a compact prompt section. This is structured retrieval, not semantic search: there are currently no embeddings, vector database, cosine similarity, or business-idea text similarity calculations. The `business_idea` is stored with each experience for traceability, but it is not currently used by the retrieval scoring algorithm.
+
+### Prompt usage and safeguards
+
+The retrieved lessons are supplied to the task factories through `relevant_experience`. Specialist prompts explicitly instruct agents to:
+
+- Treat memories as reference material rather than absolute rules.
+- Prefer the current user's requirements and constraints.
+- Reject a past decision when it conflicts with the current project.
+- Pay attention to successful patterns, failed approaches, evaluator feedback, and reusable lessons.
+
+This prevents historical output from silently overriding the current request.
+
+### Experience extraction
+
+`experience_extractor.py` performs deterministic extraction; it does not make another LLM call. For each stored specialist result it records:
+
+- Source `run_id` and `agent_name`
+- `successful_pattern` when the evaluation passes, otherwise `failed_attempt`
+- All current project constraints
+- Evaluator score and combined summary/critique/remediation feedback
+- The specialist's output as the reusable lesson
+- A boolean `successful` flag
+
+An empty agent output is not stored. Experience-save failures are logged as warnings and do not abort the blueprint run.
+
+### Experience storage schema
+
+Experiences are stored in the SQLite `experiences` table alongside blueprint history:
+
+| Column | Meaning |
+| --- | --- |
+| `run_id` | Run that produced the lesson |
+| `agent_name` | Specialist that produced it |
+| `experience_type` | `successful_pattern` or `failed_attempt` |
+| `business_idea` | Original project description |
+| `technology_preference` | Technology constraint |
+| `cloud_preference` | Cloud constraint |
+| `expected_daily_traffic` | Scale constraint |
+| `delivery_timeline_months` | Timeline constraint |
+| `data_hosting_country` | Residency constraint |
+| `decision` | Reserved decision field; currently usually empty |
+| `reason` | Combined evaluator feedback |
+| `evaluator_score` | Numeric quality score |
+| `evaluator_feedback` | Persisted evaluator summary |
+| `reusable_lesson` | Specialist output used as future prompt context |
+| `successful` | `1` for passed, `0` for failed/final-retry output |
+| `created_at` | Experience creation timestamp |
+
+Indexes exist for agent, experience type, cloud, creation time, and evaluator score. The current store query filters by agent (and supports an experience-type parameter), orders by evaluator score and recency, and the retriever applies the remaining relevance scoring in Python.
 
 ## API contract
 
@@ -514,7 +625,9 @@ The backend currently enables all origins, methods, and headers to support local
 
 ## Persistence and generated files
 
-The SQLite database is `backend/db/mindmesh.db`. The `blueprints` table stores:
+The SQLite database is `backend/db/mindmesh.db`. It stores two related but distinct kinds of data.
+
+The `blueprints` table stores:
 
 - Numeric database ID
 - Unique `run_id`
@@ -522,6 +635,8 @@ The SQLite database is `backend/db/mindmesh.db`. The `blueprints` table stores:
 - All six request inputs
 - Markdown and HTML content
 - Status
+
+The `experiences` table stores evaluated lessons from the Business Analyst, Solution Architect, Technology Advisor, and Delivery Planner stages. These records are internal pipeline memory; there are currently no public REST endpoints for browsing, editing, or deleting individual experiences. They are read during a new generation run and written automatically during the SSE pipeline.
 
 The filesystem copy in `backend/outputs` is intentionally maintained as a fallback/export path:
 
@@ -533,7 +648,7 @@ backend/outputs/
 └── final_output.html
 ```
 
-The database module initializes the schema on import and can backfill Markdown files that exist without database rows. Treat the local database and output directory as application data; back them up or replace them with managed storage for a multi-instance deployment.
+The database module initializes both tables and their indexes on import, and can backfill Markdown files that exist without database rows. Treat the local database and output directory as application data; back them up or replace them with managed storage for a multi-instance deployment. Blueprint deletion removes the selected blueprint record and its output files; it does not remove experiences associated with that run, so learned history remains available to later runs.
 
 ## Configuration reference
 
@@ -572,6 +687,18 @@ An agent is split into three concerns under `backend/src/agents/<agent_name>/`:
 - `task.py`: task inputs, expected output, and context dependencies
 
 After adding an agent, update the crew ordering in `src/crew.py`, the streaming pipeline in `src/pipeline.py`, the frontend metadata in `frontend/constants.py`, and the event rendering logic in `frontend/views/execution_view.py`.
+
+### Changing experience memory
+
+Memory behavior is split across `backend/src/memory/`:
+
+- Change the `Experience` shape in `models.py` and the matching SQLite schema in `src/db.py` together.
+- Change candidate loading or persistence in `experience_store.py`.
+- Change relevance scoring or prompt formatting in `experience_retriever.py`.
+- Change deterministic conversion of evaluation results in `experience_extractor.py`.
+- Update the four task factories and `pipeline.py` if a new specialist should receive or save memory.
+
+If adding semantic retrieval later, preserve the current structured constraints as filters or ranking signals, and document the embedding model, index lifecycle, privacy implications, and fallback behavior.
 
 ### Changing the report contract
 
@@ -638,6 +765,9 @@ Five agents may each invoke an LLM and an evaluator may add another LLM call aft
 - **Output validation:** Generated architecture should be reviewed by qualified engineers and validated with threat modeling, load testing, cost estimation, and jurisdiction-specific compliance checks.
 - **Provider coupling:** The current implementation constructs Gemini-backed LLMs and uses Serper; swapping providers requires changes to model configuration and possibly the CrewAI integration.
 - **Data handling:** User business ideas and generated reports are sent to configured external model/search providers. Review provider retention, privacy, and residency terms before using sensitive or regulated information.
+- **Memory is structured, not semantic:** Experience retrieval currently ranks by agent, cloud, technology, traffic, timeline, residency, success, score, and recency. It does not find conceptually similar business ideas.
+- **Memory retention:** Experiences persist after blueprint deletion. Add an explicit retention, purge, export, and privacy policy before using the feature with sensitive project data.
+- **Report Writer evaluation boundary:** The four specialist stages have evaluation-backed memory; the final Report Writer output is assembled and saved but is not independently evaluated into memory.
 
 ## License
 
