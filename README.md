@@ -2,7 +2,7 @@
 
 ## AI Solution Architecture Blueprint Engine
 
-MindMesh is a full-stack, multi-agent architecture-planning application. It accepts a plain-language product idea and a small set of delivery constraints, then uses a sequential CrewAI workflow to produce an enterprise-style solution blueprint.
+MindMesh is a full-stack, multi-agent architecture-planning application. It accepts a plain-language product idea and delivery constraints, then uses a sequential CrewAI workflow to produce an enterprise-style solution blueprint.
 
 The generated blueprint combines:
 
@@ -45,14 +45,14 @@ At a high level, a user:
 
 1. Describes a proposed product, its users, features, and business workflow.
 2. Selects a preferred technology ecosystem and cloud platform.
-3. Selects an expected traffic/scale range.
+3. Describes the expected traffic and scale in free text.
 4. Sets a delivery timeline and data-hosting jurisdiction.
 5. Starts blueprint generation.
 6. Watches the five specialist agents execute in real time.
 7. Reviews the final blueprint in HTML and section-specific tabs.
 8. Downloads the HTML report or reopens/deletes previous runs from the history sidebar.
 
-The frontend defaults to `http://localhost:8000` for the backend. The backend exposes both a synchronous JSON endpoint and an SSE streaming endpoint; the Streamlit UI uses the streaming endpoint so that users can see agent progress and quality-gate events as they happen.
+The frontend defaults to `http://localhost:8000` for the backend. The backend exposes both a synchronous JSON endpoint and an SSE streaming endpoint. The Streamlit UI uses the streaming endpoint so users can see agent progress, retries, and quality-gate events as they happen.
 
 ## Architecture at a glance
 
@@ -138,9 +138,9 @@ sequenceDiagram
 ### Workspace and dependency management
 
 - **uv** manages the Python environment and lockfile.
-- The repository root is a uv workspace whose members include `backend`.
+- The repository root is a uv workspace containing the frontend application and the `backend` workspace member.
 - `uv.lock` records resolved dependency versions.
-- The backend has its own `backend/pyproject.toml`; the root project declares the frontend and workspace-level dependencies.
+- The backend has its own `backend/pyproject.toml`; the root `pyproject.toml` declares the frontend dependencies.
 
 ## Repository structure
 
@@ -167,7 +167,7 @@ mindmesh/
 │   │   ├── crew.py             # Standard five-agent CrewAI crew
 │   │   ├── pipeline.py         # Streaming execution and evaluation gates
 │   │   ├── evaluation.py       # Evaluator invocation and score parsing
-│   │   ├── blueprint_builder.py# Canonical 14-section report composition
+│   │   ├── blueprint_builder.py # Canonical 14-section report composition
 │   │   ├── llm.py              # Per-agent model/key construction
 │   │   ├── tools.py            # Shared Serper search tool
 │   │   ├── db.py               # SQLite schema and CRUD/history sync
@@ -211,9 +211,7 @@ cd C:\Users\rahul\OneDrive\Desktop\CTS\mindmesh
 uv sync
 ```
 
-`uv sync` creates or updates the uv-managed environment and installs the root project plus the backend workspace dependencies from the lockfile. If you only want to prepare the backend environment, run the same command from `backend`.
-
-The frontend command uses `uvx streamlit`, which can provision Streamlit in an isolated uv tool environment. Running `uv sync` first is still recommended because it makes the project environment reproducible and ensures the workspace dependencies are available.
+`uv sync` creates or updates the uv-managed environment and installs the root project plus the backend workspace dependencies from the lockfile. Use the project environment for both services so the versions in `uv.lock` are used consistently. Run it again after changing either `pyproject.toml` file.
 
 ### 2. Create the backend environment file
 
@@ -223,7 +221,7 @@ Copy the template:
 Copy-Item backend\.env.example backend\.env
 ```
 
-Open `backend\.env` and replace every placeholder with a real value. At minimum, the application settings require:
+Open `backend\.env` and replace every placeholder with a real value. The backend requires the following credentials:
 
 - `GEMINI_API_KEY_BA`
 - `GEMINI_API_KEY_SA`
@@ -235,9 +233,11 @@ Open `backend\.env` and replace every placeholder with a real value. At minimum,
 
 Do not commit `backend\.env` or expose API keys in the frontend. The frontend only calls the local backend; provider credentials are loaded by the backend.
 
-### 3. Optional model and runtime configuration
+### 3. Configure models and runtime behavior
 
-The `.env.example` file includes defaults for each role's model, retries, evaluation, timeout, and logging. Keep the model names compatible with the configured CrewAI/LiteLLM provider. See [Configuration reference](#configuration-reference).
+The `.env.example` file includes model names and defaults for retries, evaluation, timeout, and logging. Confirm that each model name is supported by the installed CrewAI/LiteLLM integration. See [Configuration reference](#configuration-reference).
+
+The backend resolves `.env` relative to `backend/src/config.py`, so the file must be located at `backend\.env`; the current working directory does not affect configuration loading.
 
 ## Running the application
 
@@ -256,17 +256,26 @@ The API should be available at:
 - OpenAPI Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 - Health check: `http://localhost:8000/health`
+- Versioned health check: `http://localhost:8000/api/v1/health`
 
 ### Terminal 2: start the frontend
 
 ```powershell
-cd C:\Users\rahul\OneDrive\Desktop\CTS\mindmesh\frontend
-uvx streamlit run app.py
+cd C:\Users\rahul\OneDrive\Desktop\CTS\mindmesh
+uv run streamlit run frontend\app.py
 ```
 
 Open the URL printed by Streamlit, normally `http://localhost:8501`.
 
-The frontend's API base URL is initialized in `frontend/app.py` as `http://localhost:8000`. If the backend runs elsewhere, update that value or provide a configuration mechanism before deploying the frontend to another environment.
+The frontend's API base URL is initialized in `frontend/app.py` as `http://localhost:8000`. If the backend runs elsewhere, update `st.session_state.api_url` initialization in `frontend/app.py` before starting the frontend.
+
+### Stop the services
+
+Press `Ctrl+C` in each terminal. The backend and frontend are independent processes, so stopping one does not stop the other.
+
+### Theme
+
+Use the Streamlit main menu to switch between **Light**, **Dark**, and **System** themes. MindMesh applies custom theme-aware CSS to the Streamlit page. The generated blueprint is rendered in its own HTML iframe and may retain its report-specific styling.
 
 ## Using the application
 
@@ -279,11 +288,11 @@ The form in `frontend/views/form_view.py` sends one JSON object with six require
 | `business_idea` | string | Product concept, users, features, and workflow | The UI asks for at least 15 non-whitespace characters |
 | `technology_preference` | string | Preferred technology ecosystem | Open-Source Stack, Enterprise Stack, Microservices Mesh, Serverless Ecosystem, or No Preference |
 | `cloud_preference` | string | Primary hosting preference | AWS, GCP, Azure, Multi-Cloud, On-Premises, or No Preference |
-| `expected_daily_traffic` | string | Expected scale profile | 10,000 DAU, 50,000 DAU, 100,000 DAU, or 1,000,000+ DAU |
+| `expected_daily_traffic` | string | Expected scale profile | Free text, for example `50,000 daily users, peak 2,500 requests/sec` |
 | `delivery_timeline_months` | integer | Target MVP delivery duration | UI range is 1–36 months |
-| `data_hosting_country` | string | Data residency/jurisdiction target | United States, India, Germany/EU, Singapore, UK, or Global Multi-Region |
+| `data_hosting_country` | string | Data residency/jurisdiction target | Free text, for example `India`, `United States`, or `EU/Germany` |
 
-Preset templates are available for HealthTech, FinTech, and Smart Logistics/Fleet use cases. They are convenience values only; all fields can be changed before submission.
+Preset templates are available for HealthTech, FinTech, and Smart Logistics/Fleet use cases. They are convenience values only; all fields can be changed before submission. Technology and cloud remain select boxes; traffic/scale and data-hosting jurisdiction are text inputs.
 
 ### Output
 
@@ -327,7 +336,7 @@ The standard crew in `backend/src/crew.py` is sequential. Each downstream task r
 | 4 | Delivery Planner | Workstreams, milestones, team shape, effort, risks, testing and release plan |
 | 5 | Report Writer | Cross-discipline synthesis and authoritative executive blueprint |
 
-When enabled, the evaluator runs after each specialist deliverable. If the score is below `EVALUATION_THRESHOLD`, the pipeline retries the agent up to `MAX_AGENT_RETRIES` times. The UI receives `evaluation_start`, `evaluation`, and `agent_retry` events for this quality gate.
+When enabled, the evaluator runs after each specialist deliverable in the streaming pipeline. If the score is below `EVALUATION_THRESHOLD`, the pipeline retries the specialist task up to `MAX_AGENT_RETRIES` times. Provider and evaluator calls also use bounded retries and `AGENT_TIMEOUT_SECONDS`; these failures are reported through `agent_retry` events.
 
 The final report is assembled by `build_master_blueprint`; it does not simply concatenate raw agent responses. Topic-specific extraction routes content into the 14 stable headings and converts the result to HTML.
 
@@ -415,6 +424,8 @@ data: {"event":"evaluation","agent":"Business Analyst","step":1,"score":0.86,"pa
 
 data: {"event":"agent_complete","agent":"Business Analyst","step":1,"total":5,"output":"...","message":"...","progress":22}
 
+data: {"event":"agent_retry","agent":"Business Analyst","step":1,"retry_count":1,"message":"Business Analyst LLM call failed; retrying ...","progress":6}
+
 data: {"event":"complete","run_id":"efc2fc1f-032","status":"completed","progress":100,"markdown":"...","html":"...","sections":{}}
 ```
 
@@ -426,7 +437,7 @@ data: {"event":"complete","run_id":"efc2fc1f-032","status":"completed","progress
 | `agent_start` | Agent began work | `agent`, `step`, `total`, `role`, `message`, `progress` |
 | `evaluation_start` | Quality gate began | `agent`, `step`, `message`, `progress` |
 | `evaluation` | Quality score returned | `agent`, `step`, `score`, `passed`, `summary`, `critique`, `remediation`, `progress` |
-| `agent_retry` | Below-threshold result is being regenerated | `agent`, `step`, `retry_count`, `message`, `progress` |
+| `agent_retry` | LLM or evaluator call is being retried, or a below-threshold result is being regenerated | `agent`, `step`, `retry_count`, `message`, `progress` |
 | `agent_complete` | Agent deliverable completed | `agent`, `step`, `output`, `message`, `progress` |
 | `complete` | Final report built and saved | `run_id`, `status`, `markdown`, `html`, `sections`, `progress` |
 | `error` | Pipeline failed | `run_id`, `error`, `message` |
@@ -604,7 +615,7 @@ Use these endpoints as the final authority when the implementation and this docu
 
 ### Backend fails while importing settings
 
-`src/config.py` requires all API-key and model variables without defaults. Ensure `backend/.env` exists and contains every required variable from `backend/.env.example`.
+`src/config.py` loads settings from `backend/.env`. Ensure the file exists and contains every credential and model variable from `backend/.env.example`. Blank credentials or model names are rejected when an agent is created.
 
 ### Blueprint generation fails with a provider error
 
@@ -620,11 +631,23 @@ The API returns a `500` for synchronous failures and emits an SSE `error` event 
 
 ### History is empty or a report cannot be reopened
 
-The backend uses paths relative to its working directory for the API's filesystem fallback. Start the backend from the `backend` directory using the documented command. Also confirm that `backend/db/mindmesh.db` and `backend/outputs` are writable.
+The backend resolves storage paths from the backend source location, so database and output paths do not depend on the terminal's current directory. Confirm that `backend/db/mindmesh.db` and `backend/outputs` are writable. Existing database records and generated HTML files are reused during filesystem synchronization.
 
 ### The generated report is slow
 
-Five agents may each invoke an LLM and an evaluator may add another LLM call after each step. Reduce `MAX_AGENT_RETRIES`, temporarily set `ENABLE_EVALUATION=false` for local diagnosis, or use smaller/faster provider models. Re-enable evaluation before relying on results.
+The streaming pipeline can make one specialist LLM call plus an evaluator call for each of five stages, with additional bounded retries. Reduce `MAX_AGENT_RETRIES`, temporarily set `ENABLE_EVALUATION=false` for local diagnosis, lower `AGENT_TIMEOUT_SECONDS` while testing, or use smaller/faster provider models. Re-enable evaluation and restore an appropriate timeout before relying on results.
+
+### Generation stops after Delivery Planner
+
+Check the backend terminal for the full traceback and the `run_id` emitted in the SSE events. The Report Writer receives the outputs from all four upstream specialists. If the failure is reproducible, verify that the backend is running from the current source tree and that all six agent model/key settings are present. The pipeline emits an `error` event instead of a successful `complete` event when a stage cannot finish.
+
+### Streamlit raises an iframe error
+
+The frontend uses `st.iframe`, not the deprecated `st.components.v1.html`. The current Streamlit API accepts positive pixel heights and `width="stretch"` or `width="content"`; it does not accept the old `scrolling` argument or a zero width. Run the frontend with the project environment command from this README so the locked Streamlit version is used.
+
+### Dark mode does not affect the page
+
+Choose **Dark** from the Streamlit main menu and allow the app to rerun. MindMesh's custom CSS targets the theme-specific Streamlit app root and the generated report iframe has independent styling. If the page is still light, reload the page after confirming that the browser is connected to the current frontend process.
 
 ## Limitations and production considerations
 

@@ -1,5 +1,5 @@
 """
-MindMesh Frontend - Global CSS Styling (Pure Light Mode Design System)
+MindMesh Frontend - Global CSS Styling
 """
 
 __all__ = ["get_custom_css", "CUSTOM_CSS"]
@@ -31,8 +31,16 @@ LIGHT_CSS = """
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-header[data-testid="stHeader"] {
+header[data-testid="stHeader"],
+header[data-testid="stHeader"] > div,
+header[data-testid="stHeader"] [data-testid="stToolbar"],
+.stAppHeader,
+.stAppToolbar,
+[data-testid="stDecoration"] {
     background: transparent !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
 }
 
 /* ─── Sidebar Pure Light Styling ─── */
@@ -701,11 +709,244 @@ div[data-testid="stColumn"] div[data-testid="stButton"] button:hover {
 </style>
 """
 
+DARK_CSS = """
+<style>
+/* Streamlit 1.64 uses a theme-specific emotion class on the app root. */
+body:has(.stApp.st-emotion-cache-13k62yr) {
+    .stApp {
+        --bg-primary: #0e1117;
+        --bg-surface: #161b22;
+        --bg-card: #1f2937;
+        --border-color: #30363d;
+        --border-hover: #484f58;
+        --text-primary: #f0f6fc;
+        --text-secondary: #c9d1d9;
+        --text-muted: #8b949e;
+        background: #0e1117 !important;
+        color: #f0f6fc !important;
+    }
+
+    .stApp *,
+    section[data-testid="stSidebar"] * {
+        border-color: #30363d;
+    }
+
+    .stApp p,
+    .stApp label,
+    .stApp h1,
+    .stApp h2,
+    .stApp h3,
+    .stApp h4,
+    .stApp span,
+    .stApp li,
+    .stApp [data-testid="stMarkdownContainer"] {
+        color: #f0f6fc !important;
+    }
+
+    section[data-testid="stSidebar"],
+    .sidebar-history-card,
+    div[data-testid="stForm"] {
+        background: #161b22 !important;
+        border-color: #30363d !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stStatusWidget"] {
+        background: #161b22 !important;
+        border-color: #484f58 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+        color: #f0f6fc !important;
+    }
+
+    [data-testid="stStatusWidget"] button,
+    [data-testid="stStatusWidget"] [role="button"] {
+        background: #21262d !important;
+        color: #f0f6fc !important;
+        border-color: #484f58 !important;
+    }
+
+    [data-testid="stStatusWidget"] svg,
+    [data-testid="stStatusWidget"] span {
+        color: #f0f6fc !important;
+        fill: currentColor;
+    }
+
+    .sidebar-history-card .history-title {
+        color: #f0f6fc !important;
+    }
+
+    .sidebar-history-card .history-meta {
+        color: #c9d1d9 !important;
+    }
+
+    .sidebar-history-card .history-meta span {
+        color: #c9d1d9 !important;
+    }
+
+    .sidebar-history-card .history-tag {
+        background: #21262d !important;
+        border-color: #484f58 !important;
+        color: #f0f6fc !important;
+    }
+
+    .sidebar-history-card .history-id {
+        color: #8b949e !important;
+        font-family: monospace;
+        font-size: 0.70rem;
+    }
+
+    .sidebar-history-card > div[style*="font-size"] {
+        color: #8b949e !important;
+    }
+
+    div[data-testid="stForm"] input,
+    div[data-testid="stForm"] textarea,
+    div[data-testid="stForm"] div[data-baseweb="select"] > div,
+    input,
+    textarea {
+        background: #0e1117 !important;
+        color: #f0f6fc !important;
+        border-color: #484f58 !important;
+    }
+
+    div[data-testid="stHorizontalBlock"] button,
+    section[data-testid="stSidebar"] div[data-testid="stButton"] button,
+    button[data-testid="stBaseButton-secondary"] {
+        background: #21262d !important;
+        color: #f0f6fc !important;
+        border-color: #484f58 !important;
+    }
+
+    .main blockquote,
+    .insight-box,
+    [data-testid="stAlert"] {
+        background: #1c2128 !important;
+        color: #f0f6fc !important;
+        border-color: #484f58 !important;
+    }
+
+    .main hr {
+        border-top-color: #30363d !important;
+    }
+
+    [data-testid="stTabs"] button {
+        color: #c9d1d9 !important;
+    }
+
+    [data-testid="stTabs"] button[aria-selected="true"] {
+        color: #ff4b4b !important;
+    }
+}
+
+/* Keep these selectors for Streamlit versions that expose data-theme. */
+html[data-theme="dark"] .stApp,
+body[data-theme="dark"] .stApp,
+[data-theme="dark"] .stApp,
+.stApp[data-theme="dark"] {
+    --bg-primary: #0e1117;
+    --bg-surface: #161b22;
+    --bg-card: #1f2937;
+    --border-color: #30363d;
+    --border-hover: #484f58;
+    --text-primary: #f0f6fc;
+    --text-secondary: #c9d1d9;
+    --text-muted: #8b949e;
+    background: #0e1117 !important;
+    color: #f0f6fc !important;
+}
+
+html[data-theme="dark"] .stApp *,
+body[data-theme="dark"] .stApp *,
+[data-theme="dark"] .stApp *,
+.stApp[data-theme="dark"] * {
+    border-color: #30363d;
+}
+
+html[data-theme="dark"] .stApp p,
+html[data-theme="dark"] .stApp label,
+html[data-theme="dark"] .stApp h1,
+html[data-theme="dark"] .stApp h2,
+html[data-theme="dark"] .stApp h3,
+html[data-theme="dark"] .stApp h4,
+html[data-theme="dark"] .stApp span,
+html[data-theme="dark"] .stApp li,
+html[data-theme="dark"] .stApp [data-testid="stMarkdownContainer"] {
+    color: #f0f6fc !important;
+}
+
+html[data-theme="dark"] section[data-testid="stSidebar"],
+body[data-theme="dark"] section[data-testid="stSidebar"] {
+    background: #161b22 !important;
+}
+
+html[data-theme="dark"] .sidebar-history-card,
+html[data-theme="dark"] div[data-testid="stForm"] {
+    background: #161b22 !important;
+    border-color: #30363d !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] [data-testid="stStatusWidget"],
+body[data-theme="dark"] [data-testid="stStatusWidget"] {
+    background: #161b22 !important;
+    border-color: #484f58 !important;
+    color: #f0f6fc !important;
+}
+
+html[data-theme="dark"] [data-testid="stStatusWidget"] button,
+html[data-theme="dark"] [data-testid="stStatusWidget"] [role="button"],
+body[data-theme="dark"] [data-testid="stStatusWidget"] button,
+body[data-theme="dark"] [data-testid="stStatusWidget"] [role="button"] {
+    background: #21262d !important;
+    color: #f0f6fc !important;
+    border-color: #484f58 !important;
+}
+
+html[data-theme="dark"] div[data-testid="stForm"] input,
+html[data-theme="dark"] div[data-testid="stForm"] textarea,
+html[data-theme="dark"] div[data-testid="stForm"] div[data-baseweb="select"] > div,
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea {
+    background: #0e1117 !important;
+    color: #f0f6fc !important;
+    border-color: #484f58 !important;
+}
+
+html[data-theme="dark"] div[data-testid="stHorizontalBlock"] button,
+html[data-theme="dark"] section[data-testid="stSidebar"] div[data-testid="stButton"] button,
+html[data-theme="dark"] button[data-testid="stBaseButton-secondary"] {
+    background: #21262d !important;
+    color: #f0f6fc !important;
+    border-color: #484f58 !important;
+}
+
+html[data-theme="dark"] .main blockquote,
+html[data-theme="dark"] .insight-box,
+html[data-theme="dark"] [data-testid="stAlert"] {
+    background: #1c2128 !important;
+    color: #f0f6fc !important;
+    border-color: #484f58 !important;
+}
+
+html[data-theme="dark"] .main hr {
+    border-top-color: #30363d !important;
+}
+
+html[data-theme="dark"] [data-testid="stTabs"] button {
+    color: #c9d1d9 !important;
+}
+
+html[data-theme="dark"] [data-testid="stTabs"] button[aria-selected="true"] {
+    color: #ff4b4b !important;
+}
+</style>
+"""
+
 
 def get_custom_css(theme: str = "Light") -> str:
-    """Return pure light mode CSS stylesheet."""
-    return LIGHT_CSS
+    """Return the app stylesheet with light and Streamlit dark-theme rules."""
+    return LIGHT_CSS + DARK_CSS
 
 
 # Default stylesheet export
-CUSTOM_CSS = LIGHT_CSS
+CUSTOM_CSS = get_custom_css()

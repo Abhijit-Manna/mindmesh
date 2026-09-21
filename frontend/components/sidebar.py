@@ -48,7 +48,7 @@ def render_sidebar_history(api_client: APIClient, is_healthy: bool):
                                 <span>{created or 'Recent'}</span>
                                 <span class="history-tag">{tag_text}</span>
                             </div>
-                            <div style="font-size:0.70rem; color:#64748b; font-family:monospace;">ID: {r_id}</div>
+                            <div class="history-id">ID: {r_id}</div>
                         </div>
                         """, unsafe_allow_html=True)
 

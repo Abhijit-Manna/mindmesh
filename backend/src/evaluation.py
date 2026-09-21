@@ -16,20 +16,27 @@ def parse_evaluation_json(eval_raw: str) -> Dict[str, Any]:
         # Match ```json { ... } ``` or ``` { ... } ```
         match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", eval_raw, re.DOTALL)
         if match:
-            return json.loads(match.group(1))
+            parsed = json.loads(match.group(1))
+            return parsed if isinstance(parsed, dict) else _invalid_evaluation_result()
         # Match standalone JSON {...}
         match_raw = re.search(r"(\{.*?\})", eval_raw, re.DOTALL)
         if match_raw:
-            return json.loads(match_raw.group(1))
-        return json.loads(eval_raw)
-    except Exception:
-            return {
-            "score": 0.0,
-            "passed": False,
-            "summary": "Evaluator output could not be parsed.",
-            "critique": ["Evaluator returned malformed or non-JSON output."],
-            "remediation_guidance": "Re-run the evaluator and return valid JSON using the required schema.",
-        }
+            parsed = json.loads(match_raw.group(1))
+            return parsed if isinstance(parsed, dict) else _invalid_evaluation_result()
+        parsed = json.loads(eval_raw)
+        return parsed if isinstance(parsed, dict) else _invalid_evaluation_result()
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return _invalid_evaluation_result()
+
+
+def _invalid_evaluation_result() -> Dict[str, Any]:
+    return {
+        "score": 0.0,
+        "passed": False,
+        "summary": "Evaluator output could not be parsed.",
+        "critique": ["Evaluator returned malformed or non-object JSON output."],
+        "remediation_guidance": "Return a JSON object using the required evaluation schema.",
+    }
 
 
 async def evaluate_agent_output(
@@ -55,7 +62,25 @@ async def evaluate_agent_output(
     raw_text = res.raw if hasattr(res, "raw") else str(res)
     parsed = parse_evaluation_json(raw_text)
 
-    score = float(parsed.get("score", 0.85))
+    raw_score = parsed.get("score", 0.0)
+    try:
+        score = float(raw_score)
+    except (TypeError, ValueError):
+        score = 0.0
+        parsed.setdefault(
+            "critique",
+            [],
+        )
+        if isinstance(parsed["critique"], list):
+            parsed["critique"].append(
+                "Evaluator returned a non-numeric score; output was rejected."
+            )
+        parsed.setdefault(
+            "remediation_guidance",
+            "Return a numeric score between 0.0 and 1.0.",
+        )
+
+    score = max(0.0, min(score, 1.0))
     parsed["score"] = score
     parsed["passed"] = score >= threshold
     return parsed

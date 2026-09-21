@@ -16,6 +16,7 @@ def create_report_writer() -> Agent:
         ),
         backstory=REPORT_WRITER_PROMPT,
         llm=get_rw_llm(),
+        config={},
         allow_delegation=False,
         verbose=True,
     )

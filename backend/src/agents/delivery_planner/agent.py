@@ -20,6 +20,7 @@ def create_delivery_planner() -> Agent:
         backstory=DELIVERY_PLANNER_PROMPT,
         llm=get_dp_llm(),
         tools=[get_serper_tool()],
+        config={},
         allow_delegation=False,
         verbose=True,
     )

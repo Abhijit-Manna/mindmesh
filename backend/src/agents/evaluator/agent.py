@@ -16,6 +16,7 @@ def create_evaluator() -> Agent:
         ),
         backstory=EVALUATOR_PROMPT,
         llm=get_ev_llm(),
+        config={},
         allow_delegation=False,
         verbose=True,
     )

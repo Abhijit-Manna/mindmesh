@@ -2,6 +2,8 @@ import re
 import subprocess
 import tempfile
 import os
+import html as html_lib
+import shutil
 import markdown
 
 
@@ -52,6 +54,11 @@ def mermaid_to_svg(mermaid_code: str) -> str | None:
     if not mermaid_code:
         return None
 
+    npx_path = shutil.which("npx")
+    if npx_path is None:
+        print("[html_converter] npx is unavailable; using client-side Mermaid rendering.")
+        return None
+
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_path = os.path.join(tmpdir, "diagram.mmd")
@@ -62,8 +69,7 @@ def mermaid_to_svg(mermaid_code: str) -> str | None:
 
             result = subprocess.run(
                 [
-                    "npx", "-y", "@mermaid-js/mermaid-cli",
-                    "mmdc",
+                    npx_path, "-y", "@mermaid-js/mermaid-cli",
                     "-i", input_path,
                     "-o", output_path,
                     "--backgroundColor", "white",
@@ -98,6 +104,9 @@ def mermaid_to_svg(mermaid_code: str) -> str | None:
 
             return svg_content
 
+    except FileNotFoundError:
+        print("[html_converter] npx could not be started; using client-side Mermaid rendering.")
+        return None
     except subprocess.TimeoutExpired:
         print("[html_converter] mmdc timed out.")
         return None
@@ -165,7 +174,11 @@ def convert_mermaid_blocks(html: str) -> str:
             )
 
         # Fallback: client-side rendering via Mermaid.js CDN script in <head>
-        return f'<div class="mermaid">{mermaid_code}</div>'
+        return (
+            '<div class="mermaid">'
+            f"{html_lib.escape(mermaid_code, quote=False)}"
+            "</div>"
+        )
 
     return re.sub(pattern, replace_mermaid, html, flags=re.DOTALL)
 

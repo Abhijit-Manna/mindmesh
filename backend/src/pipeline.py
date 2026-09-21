@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from typing import Any, AsyncGenerator, Callable, Dict
 from crewai import Crew, Task
 
@@ -13,7 +14,35 @@ from src.agents.technology_advisor.task import create_technology_advisor_task
 from src.agents.delivery_planner.task import create_delivery_planner_task
 from src.agents.report_writer.task import create_report_writer_task
 
-    
+
+async def _kickoff_with_retries(
+    crew: Crew,
+    max_attempts: int,
+    timeout_seconds: int,
+    on_retry: Callable[[int, int, Exception], Any] | None = None,
+) -> Any:
+    """Run a CrewAI kickoff with bounded timeout and provider retries."""
+    attempts = max(1, max_attempts)
+    timeout = max(1, timeout_seconds)
+    last_error: Exception | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            return await asyncio.wait_for(
+                asyncio.to_thread(crew.kickoff),
+                timeout=timeout,
+            )
+        except (Exception, asyncio.TimeoutError) as exc:
+            last_error = exc
+            if attempt == attempts:
+                raise
+            if on_retry is not None:
+                await on_retry(attempt, attempts, exc)
+            await asyncio.sleep(min(2 ** (attempt - 1), 8))
+
+    raise RuntimeError("LLM kickoff failed without an exception.") from last_error
+
+
 async def execute_step_with_eval(
     agent_name: str,
     role: str,
@@ -42,6 +71,8 @@ async def execute_step_with_eval(
 
     retries = 0
     final_output = ""
+    provider_attempts = max(1, max_retries + 1)
+    timeout_seconds = getattr(settings, "AGENT_TIMEOUT_SECONDS", 120)
 
     await event_queue.put({
         "event": "agent_start",
@@ -55,8 +86,31 @@ async def execute_step_with_eval(
 
     while retries <= max_retries:
         crew = Crew(agents=[task.agent], tasks=[task], verbose=True)
-        res = await asyncio.to_thread(crew.kickoff)
-        final_output = res.raw if hasattr(res, "raw") else str(res)
+        async def notify_agent_retry(
+            attempt: int,
+            attempts: int,
+            error: Exception,
+        ) -> None:
+            await event_queue.put({
+                "event": "agent_retry",
+                "agent": agent_name,
+                "step": step_num,
+                "retry_count": attempt,
+                "message": (
+                    f"{agent_name} LLM call failed; retrying "
+                    f"(Attempt {attempt + 1}/{attempts}): {error}"
+                ),
+                "progress": start_pct + 1,
+            })
+
+        res = await _kickoff_with_retries(
+            crew=crew,
+            max_attempts=provider_attempts,
+            timeout_seconds=timeout_seconds,
+            on_retry=notify_agent_retry,
+        )
+        raw_output = getattr(res, "raw", res)
+        final_output = str(raw_output or "").strip()
 
         if not enable_eval:
             break
@@ -72,13 +126,52 @@ async def execute_step_with_eval(
             "progress": start_pct + 3,
         })
 
-        eval_res = await evaluate_agent_output(
-            agent_role=agent_name,
-            agent_output=final_output,
-            inputs=inputs,
-            threshold=eval_threshold,
-            upstream_context=upstream_context,
-        )
+        async def notify_evaluator_retry(
+            attempt: int,
+            attempts: int,
+            error: Exception,
+        ) -> None:
+            await event_queue.put({
+                "event": "agent_retry",
+                "agent": agent_name,
+                "step": step_num,
+                "retry_count": attempt,
+                "message": (
+                    f"Evaluator call failed; retrying "
+                    f"(Attempt {attempt + 1}/{attempts}): {error}"
+                ),
+                "progress": start_pct + 4,
+            })
+
+        async def evaluate_with_retries() -> Dict[str, Any]:
+            eval_attempts = max(1, max_retries + 1)
+            last_error: Exception | None = None
+            for attempt in range(1, eval_attempts + 1):
+                try:
+                    return await asyncio.wait_for(
+                        evaluate_agent_output(
+                            agent_role=agent_name,
+                            agent_output=final_output,
+                            inputs=inputs,
+                            threshold=eval_threshold,
+                            upstream_context=upstream_context,
+                        ),
+                        timeout=timeout_seconds,
+                    )
+                except (Exception, asyncio.TimeoutError) as exc:
+                    last_error = exc
+                    if attempt == eval_attempts:
+                        raise
+                    await notify_evaluator_retry(attempt, eval_attempts, exc)
+                    await asyncio.sleep(min(2 ** (attempt - 1), 8))
+            raise RuntimeError("Evaluator failed without an exception.") from last_error
+
+        eval_res = await evaluate_with_retries()
+        if not isinstance(eval_res, dict):
+            raise TypeError(
+                f"Evaluator returned an invalid result type: "
+                f"{type(eval_res).__name__}"
+            )
 
         try:
             score = float(eval_res.get("score", 0.0) or 0.0)
@@ -459,6 +552,11 @@ async def run_agents_step_by_step(
             })
 
         except Exception as err:
+            traceback_text = traceback.format_exc()
+            print(
+                f"[pipeline] run_id={run_id} failed with traceback:\n"
+                f"{traceback_text}"
+            )
             await event_queue.put({
                 "event": "error",
                 "run_id": run_id,

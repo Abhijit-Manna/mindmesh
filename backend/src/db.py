@@ -59,10 +59,21 @@ def sync_filesystem_blueprints():
             continue
 
         try:
+            with get_db_connection() as conn:
+                existing = conn.execute(
+                    "SELECT 1 FROM blueprints WHERE run_id = ?",
+                    (run_id,),
+                ).fetchone()
+            if existing:
+                continue
+
             content = md_file.read_text(encoding="utf-8")
-            html_content = markdown_to_html(content, title=f"MindMesh Blueprint - {run_id}")
             html_file = OUTPUTS_DIR / f"{run_id}.html"
-            html_file.write_text(html_content, encoding="utf-8")
+            if html_file.exists():
+                html_content = html_file.read_text(encoding="utf-8")
+            else:
+                html_content = markdown_to_html(content, title=f"MindMesh Blueprint - {run_id}")
+                html_file.write_text(html_content, encoding="utf-8")
 
             # Extract business idea
             business_idea = ""
@@ -188,4 +199,3 @@ def delete_blueprint_by_run_id(run_id: str) -> bool:
 # Automatically ensure DB tables on import & backfill existing blueprints
 init_db()
 sync_filesystem_blueprints()
-

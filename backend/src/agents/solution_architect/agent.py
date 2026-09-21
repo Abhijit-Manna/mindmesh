@@ -20,6 +20,7 @@ def create_solution_architect() -> Agent:
         backstory=SOLUTION_ARCHITECT_PROMPT,
         llm=get_sa_llm(),
         tools=[get_serper_tool()],
+        config={},
         allow_delegation=False,
         verbose=True,
     )

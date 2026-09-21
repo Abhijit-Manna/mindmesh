@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
@@ -11,31 +15,31 @@ class Settings(BaseSettings):
     # ==========================================
     # Gemini API Keys
     # ==========================================
-    GEMINI_API_KEY_BA: str
-    GEMINI_API_KEY_SA: str
-    GEMINI_API_KEY_TA: str
-    GEMINI_API_KEY_DP: str
-    GEMINI_API_KEY_RW: str
-    GEMINI_API_KEY_EV: str
+    GEMINI_API_KEY_BA: str = ""
+    GEMINI_API_KEY_SA: str = ""
+    GEMINI_API_KEY_TA: str = ""
+    GEMINI_API_KEY_DP: str = ""
+    GEMINI_API_KEY_RW: str = ""
+    GEMINI_API_KEY_EV: str = ""
 
     # ==========================================
     # Agent Models
     # ==========================================
-    BA_MODEL: str
-    SA_MODEL: str
-    TA_MODEL: str
-    DP_MODEL: str
-    RW_MODEL: str
+    BA_MODEL: str = ""
+    SA_MODEL: str = ""
+    TA_MODEL: str = ""
+    DP_MODEL: str = ""
+    RW_MODEL: str = ""
 
     # ==========================================
     # Evaluation Model
     # ==========================================
-    EVALUATION_MODEL: str
+    EVALUATION_MODEL: str = ""
 
     # ==========================================
     # Serper.dev
     # ==========================================
-    SERPER_API_KEY: str
+    SERPER_API_KEY: str = ""
 
     # ==========================================
     # Agent Retry Settings
@@ -62,7 +66,7 @@ class Settings(BaseSettings):
     # Pydantic Settings Configuration
     # ==========================================
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )

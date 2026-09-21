@@ -14,7 +14,7 @@ def create_evaluator_task(
 ) -> Task:
     agent = create_evaluator()
 
-    normalized_role = agent_role.strip().lower()
+    normalized_role = str(agent_role or "").strip().lower()
 
     role_guidance = {
         "business analyst": """
@@ -181,7 +181,7 @@ These constraints are authoritative.
 
 ================ DELIVERABLE TO AUDIT ================
 
-{agent_output.strip()}
+{str(agent_output or "").strip()}
 
 ================ UPSTREAM CONTEXT ================
 

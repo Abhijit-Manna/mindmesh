@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-OUTPUT_DIR = Path("outputs")
+OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "outputs"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 

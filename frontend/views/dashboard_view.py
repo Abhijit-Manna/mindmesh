@@ -3,8 +3,9 @@ MindMesh Frontend - Completed Dashboard View Component
 """
 
 import re
+from urllib.parse import quote
+
 import streamlit as st
-import streamlit.components.v1 as components
 
 
 def extract_sections_from_markdown(md_text: str) -> dict:
@@ -112,7 +113,10 @@ def render_dashboard_view():
     with tab_html:
         if html_content:
             display_html = html_content.replace('class="dark-theme"', '').replace("class='dark-theme'", '')
-            components.html(display_html, height=850, scrolling=True)
+            st.iframe(
+                src=f"data:text/html;charset=utf-8,{quote(display_html)}",
+                height=850,
+            )
         else:
             st.info("HTML content not available for this run.")
 

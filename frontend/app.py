@@ -33,8 +33,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Apply pure light theme CSS
-st.session_state.theme = "Light"
+# Apply theme-aware CSS. Streamlit controls the selected theme from its menu.
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # --- Session State Initialization ---

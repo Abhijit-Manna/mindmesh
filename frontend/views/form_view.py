@@ -3,14 +3,13 @@ MindMesh Frontend - Form View Component
 """
 
 import time
+from urllib.parse import quote
+
 import streamlit as st
-import streamlit.components.v1 as components
 from constants import (
     PRESET_TEMPLATES,
     TECH_STACK_OPTIONS,
     CLOUD_OPTIONS,
-    TRAFFIC_OPTIONS,
-    COUNTRY_OPTIONS
 )
 
 
@@ -68,12 +67,11 @@ def render_form_view():
             )
 
             cur_traffic = st.session_state.form_data.get("expected_daily_traffic")
-            traffic_idx = TRAFFIC_OPTIONS.index(cur_traffic) if cur_traffic in TRAFFIC_OPTIONS else 0
-            expected_daily_traffic = st.selectbox(
+            expected_daily_traffic = st.text_input(
                 "4. Expected Daily Traffic & Scale *",
-                options=TRAFFIC_OPTIONS,
-                index=traffic_idx,
-                help="Expected active user concurrency."
+                value=cur_traffic or "",
+                placeholder="Example: 50,000 daily users, peak 2,500 requests/sec",
+                help="Describe expected daily users, requests per second, or peak concurrency."
             )
 
         with col2:
@@ -85,21 +83,20 @@ def render_form_view():
                 step=1,
                 help="Whole number of months to target MVP launch."
             )
-
             cur_country = st.session_state.form_data.get("data_hosting_country")
-            country_idx = COUNTRY_OPTIONS.index(cur_country) if cur_country in COUNTRY_OPTIONS else 0
-            data_hosting_country = st.selectbox(
+            cur_country = st.session_state.form_data.get("data_hosting_country")
+            data_hosting_country = st.text_input(
                 "6. Data Hosting Region / Jurisdiction *",
-                options=COUNTRY_OPTIONS,
-                index=country_idx,
-                help="Data residency compliance target."
+                value=cur_country or "",
+                placeholder="Example: India, United States, or EU/Germany",
+                help="Enter the country, region, or data-residency requirement."
             )
 
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         submit_btn = st.form_submit_button("Generate Architecture Blueprint", type="primary", use_container_width=True)
 
     # Attach interactive button loading spinner on click
-    components.html("""
+    spinner_script = """
     <script>
     const attachButtonSpinner = () => {
         try {
@@ -122,7 +119,12 @@ def render_form_view():
     attachButtonSpinner();
     setInterval(attachButtonSpinner, 400);
     </script>
-    """, height=0, width=0)
+    """
+    st.iframe(
+        src=f"data:text/html;charset=utf-8,{quote(spinner_script)}",
+        height=1,
+        width="content",
+    )
 
     if submit_btn:
         errors = []

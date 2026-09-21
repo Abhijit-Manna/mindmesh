@@ -20,6 +20,7 @@ def create_technology_advisor() -> Agent:
         backstory=TECHNOLOGY_ADVISOR_PROMPT,
         llm=get_ta_llm(),
         tools=[get_serper_tool()],
+        config={},
         allow_delegation=False,
         verbose=True,
     )

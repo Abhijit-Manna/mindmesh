@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.crew import create_crew, run_agents_step_by_step, build_master_blueprint
-from src.utils.output_file import save_output
+from src.utils.output_file import OUTPUT_DIR, save_output
 from src.utils.html_converter import markdown_to_html
 from src.utils.section_parser import extract_sections_from_markdown
 from src.db import (
@@ -40,7 +40,7 @@ async def list_blueprints():
 
     # Fallback to filesystem if DB was empty but files exist
     if not run_ids:
-        outputs_dir = Path("outputs")
+        outputs_dir = OUTPUT_DIR
         if outputs_dir.exists():
             run_ids = [
                 file.stem for file in outputs_dir.glob("*.html") if file.stem != "final_output"
@@ -194,7 +194,7 @@ async def get_blueprint(run_id: str):
         }
 
     # Fallback to filesystem
-    outputs_dir = Path("outputs")
+    outputs_dir = OUTPUT_DIR
     html_file = outputs_dir / f"{run_id}.html"
     md_file = outputs_dir / f"{run_id}.md"
 
@@ -229,7 +229,7 @@ async def delete_blueprint(run_id: str):
 
     db_deleted = delete_blueprint_by_run_id(run_id)
 
-    outputs_dir = Path("outputs")
+    outputs_dir = OUTPUT_DIR
     file_deleted = False
     for ext in [".html", ".md"]:
         fpath = outputs_dir / f"{run_id}{ext}"

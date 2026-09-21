@@ -26,10 +26,10 @@ def create_report_writer_task(
         raw = getattr(output, "raw", output)
         return str(raw or "").strip()
 
-    ba_source = ba_output.strip() or _task_output(ba_task)
-    sa_source = sa_output.strip() or _task_output(sa_task)
-    ta_source = ta_output.strip() or _task_output(ta_task)
-    dp_source = dp_output.strip() or _task_output(dp_task)
+    ba_source = str(ba_output or "").strip() or _task_output(ba_task)
+    sa_source = str(sa_output or "").strip() or _task_output(sa_task)
+    ta_source = str(ta_output or "").strip() or _task_output(ta_task)
+    dp_source = str(dp_output or "").strip() or _task_output(dp_task)
 
     description = f"""
 You are the final author of the MindMesh Enterprise Solution Blueprint.
@@ -276,6 +276,7 @@ Return only the completed blueprint in Markdown.
 """
 
     return Task(
+        agent=agent,
         description=description,
         expected_output=(
             "A single, detailed Enterprise Solution Blueprint in Markdown with all 14 core "
