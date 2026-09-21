@@ -14,34 +14,446 @@ def create_delivery_planner_task(
     context_tasks = [ba_task, sa_task, ta_task]
 
     description = f"""
-Create an exhaustive, production-ready Implementation and Delivery Plan for the system.
+Act as the Principal Delivery Planner for this solution.
 
-The Business Analyst, Solution Architect, and Technology Advisor deliverables
-are provided as upstream context.
+Create a realistic, execution-ready Delivery and Implementation Plan using the
+Business Analyst requirements, Solution Architect architecture, and Technology
+Advisor technology decisions.
 
-================ HARD CONSTRAINTS ================
-Hard Delivery Timeline: {delivery_timeline_months} months (DO NOT EXCEED).
-All MVP milestones, integration, and security testing must be completed within this window.
+================ HARD DELIVERY CONSTRAINT ================
 
-================ DELIVERABLES REQUIRED ================
-1. Delivery Methodology & Governance Framework (Scrum cadence, sprint structure, definition of done)
-2. Comprehensive Workstreams & Epic Breakdown (Detailed table with Epics, Owners, and Durations)
-3. Staffing Model & Team Topology (Roles, FTE allocations, skill profiles, and workstream alignment)
-4. Milestone Schedule with Strict Entry & Exit Criteria (Months 1 through {delivery_timeline_months})
-5. Critical Path Analysis & Pre-requisite Dependencies
-6. Comprehensive Testing, QA & Load Testing Strategy (Targeting expected traffic load, security hardening)
-7. Exhaustive Delivery Risk Register & Mitigation Strategy (Likelihood, Impact, Risk Score, Contingencies)
-8. Post-MVP Evolution Roadmap
+Delivery Timeline:
+{delivery_timeline_months} months
 
-Build upon all upstream technical choices. Provide actionable, highly structured Markdown tables and deep operational planning.
+This is a hard constraint.
+
+The MVP must be designed, implemented, integrated, tested, security-validated,
+production-readied, and released within this timeline.
+
+Do not silently extend the timeline.
+
+If the upstream scope cannot realistically fit, identify the conflict and
+show how scope, sequencing, staffing, or implementation approach must change.
+Do not hide feasibility problems.
+
+================ DELIVERY OBJECTIVE ================
+
+Translate the upstream solution into an executable delivery model.
+
+The plan must make clear:
+
+What needs to be built?
+Who builds it?
+In what order?
+What depends on what?
+What can happen in parallel?
+How much effort is involved?
+When is each capability expected?
+What proves the work is complete?
+What can block delivery?
+How is the system prepared for production?
+
+Use the actual upstream requirements, architecture, and technology choices.
+Do not redesign them.
+
+================ REQUIRED DELIVERABLES ================
+
+1. DELIVERY STRATEGY & GOVERNANCE
+
+Define the delivery approach appropriate for the project.
+
+Cover:
+- delivery methodology
+- sprint / iteration cadence
+- planning cadence
+- backlog / scope control
+- architecture and technical decision governance
+- Definition of Ready
+- Definition of Done
+- review/demo cadence
+- defect management
+- stakeholder checkpoints
+- release governance
+
+Explain why the chosen delivery approach fits the project and timeline.
+
+2. MVP-TO-WORK MAPPING
+
+Translate the Business Analyst's MVP scope into actual implementation work.
+
+Use:
+
+| MVP Capability | Required Outcome | Major Work Needed | Primary Owner | Dependencies | Delivery Phase |
+
+Do not reduce the MVP to a list of feature names.
+
+Show how business requirements become engineering work.
+
+3. IMPLEMENTATION WORKSTREAMS
+
+Create detailed workstreams.
+
+Examples where relevant:
+- foundation/platform setup
+- frontend/client implementation
+- backend/application implementation
+- core business workflows
+- data/persistence
+- integrations
+- authentication/authorization
+- security/compliance
+- observability
+- performance/scalability
+- testing/QA
+- DevOps/deployment
+- production readiness
+
+Use:
+
+| Workstream | Objective | Major Activities | Deliverables | Primary Role | Supporting Roles | Dependencies | Duration |
+
+Activities must describe real implementation work, not generic labels.
+
+For example, prefer:
+"Implement consent validation rules and audit events"
+over:
+"Build consent module."
+
+4. TEAM & STAFFING MODEL
+
+Derive the team from the actual scope.
+
+Use:
+
+| Role | Core Responsibility | Workstreams | Allocation / FTE | Active Phase | Key Deliverables |
+
+Explain:
+- why each role is required
+- where the role is heavily used
+- where the role is part-time/shared
+- which responsibilities should not be combined
+- when specialist involvement is required
+- how the team changes across phases
+
+Do not invent a large team merely to make the schedule appear faster.
+
+5. CAPACITY & STAFFING FEASIBILITY CHECK
+
+Validate whether the proposed staffing can actually complete the stated work.
+
+Consider:
+- parallel work capacity
+- specialist bottlenecks
+- shared-role contention
+- review/approval capacity
+- QA capacity
+- security capacity
+- DevOps capacity
+- integration capacity
+
+Identify any staffing bottleneck that could affect the critical path.
+
+6. PHASE PLAN
+
+Break the complete timeline into meaningful implementation phases.
+
+At minimum, cover as applicable:
+- foundation
+- core implementation
+- integrations
+- system integration
+- validation
+- hardening
+- production readiness
+- go-live / hypercare
+
+For each phase explain:
+- objective
+- major workstreams
+- major activities
+- expected outputs
+- dependencies
+- entry conditions
+- exit criteria
+- major risks
+
+Do not compress the project into a handful of generic milestones.
+
+7. DETAILED SPRINT / ITERATION PLAN
+
+Create a realistic sprint-level or iteration-level plan across the
+{delivery_timeline_months}-month timeline.
+
+Use a structure such as:
+
+| Sprint / Window | Objective | Work in Progress | Key Deliverables | Dependencies | Quality Gate | Exit Condition |
+
+Make dependencies and parallel work visible.
+
+The schedule must show the movement from:
+
+Foundation
+→ Implementation
+→ Integration
+→ Validation
+→ Stabilization
+→ Production
+
+Include contingency or recovery space where realistically required.
+
+8. CRITICAL PATH & DEPENDENCIES
+
+Identify the work that controls the delivery date.
+
+Use:
+
+| Dependency / Milestone | Predecessor | Successor | Why It Matters | Critical Path? | Consequence if Delayed | Mitigation |
+
+Cover relevant:
+- business approvals
+- environment setup
+- architecture decisions
+- technology provisioning
+- integrations
+- data availability
+- security prerequisites
+- testing dependencies
+- deployment prerequisites
+- external/vendor dependencies
+
+Distinguish hard blockers from softer dependencies.
+
+9. EFFORT & COMPLEXITY ASSESSMENT
+
+For major workstreams estimate relative effort and complexity.
+
+Use:
+
+| Workstream | Scope | Complexity | Main Effort Drivers | Key Risk | Estimated Relative Effort |
+
+Do not fabricate precision.
+
+Explain the drivers behind the estimates.
+
+Where the upstream inputs are insufficient for numerical estimation, say so and
+use qualitative sizing.
+
+10. TESTING & QUALITY PLAN
+
+Create an execution-oriented testing strategy tied to the delivery schedule.
+
+Cover relevant:
+- unit testing
+- component testing
+- API/contract testing
+- integration testing
+- end-to-end testing
+- database/data validation
+- asynchronous processing
+- regression testing
+- security testing
+- performance/load testing
+- resilience/failure testing
+- backup/restore
+- UAT
+- production smoke testing
+
+Use:
+
+| Test Area | Scope | Owner | Environment | Planned Phase | Entry Criteria | Exit Criteria |
+
+Explain what must be proven before production.
+
+Do not treat testing as a final-stage activity only.
+
+11. SECURITY & PRODUCTION READINESS
+
+Explain the work required to turn the solution into a production-ready system.
+
+Cover relevant:
+- security hardening
+- IAM validation
+- secrets/configuration
+- encryption validation
+- vulnerability remediation
+- audit/log verification
+- monitoring/alerting
+- backup/recovery validation
+- operational runbooks
+- support readiness
+- incident response readiness
+- rollback readiness
+
+Make clear when these activities occur in the timeline.
+
+12. DEPLOYMENT & GO-LIVE PLAN
+
+Describe the complete production release sequence.
+
+Cover:
+- environment readiness
+- build/artifact promotion
+- database/schema migration
+- configuration/secrets
+- release approvals
+- deployment
+- health checks
+- smoke tests
+- rollback
+- monitoring
+- hypercare
+- ownership after release
+
+Use entry and exit criteria for go-live.
+
+13. DELIVERY RISK REGISTER
+
+Create a project-specific risk register.
+
+Use:
+
+| Risk | Cause | Impact | Likelihood | Early Warning | Mitigation | Contingency | Owner |
+
+Cover the risks that actually matter for this project:
+- scope
+- timeline
+- staffing
+- architecture
+- technology
+- integrations
+- data
+- security
+- compliance
+- performance
+- deployment
+- external dependencies
+
+Do not fill the register with generic project-management risks.
+
+14. POST-MVP EVOLUTION ROADMAP
+
+Preserve capabilities intentionally deferred from MVP.
+
+For each major post-MVP capability explain:
+- why it was deferred
+- prerequisite
+- expected value
+- technical implication
+- delivery implication
+- relationship to the MVP architecture
+
+Separate near-term evolution from longer-term expansion.
+
+================ DELIVERY REALISM RULES ================
+
+Build a plan a real engineering organization could execute.
+
+Do not:
+- assume unlimited parallelism
+- schedule every activity simultaneously
+- ignore dependencies
+- under-resource QA/security/DevOps
+- leave no stabilization time
+- postpone all integration until the end
+- pretend production release is instantaneous
+- invent impossible staffing capacity
+- hide scope/timeline conflicts
+
+For every major commitment, internally check:
+
+1. What must exist first?
+2. Which role performs the work?
+3. What dependency exists?
+4. What can run in parallel?
+5. What must be validated?
+6. What happens if it is delayed?
+7. Does the staffing support the workload?
+8. Does the work fit inside the hard timeline?
+
+================ UPSTREAM AUTHORITY ================
+
+Business Analyst owns:
+- business problem
+- users/personas
+- business requirements
+- business rules
+- MVP scope
+- NFRs
+- business dependencies and risks
+
+Solution Architect owns:
+- architecture style
+- component boundaries
+- data boundaries
+- system flows
+- resilience patterns
+- integration architecture
+- security architecture
+
+Technology Advisor owns:
+- programming languages
+- frameworks
+- databases
+- messaging
+- cloud services
+- security tooling
+- observability tooling
+- technology trade-offs
+
+Delivery Planner owns:
+- implementation sequencing
+- workstreams
+- staffing
+- milestones
+- sprint plan
+- dependencies
+- critical path
+- delivery effort
+- testing schedule
+- production readiness
+- deployment
+- delivery risks
+
+Do not silently redesign upstream decisions.
+
+If an upstream decision creates a delivery problem, identify the problem and
+document the delivery implication rather than silently replacing the decision.
+
+================ AUTHORING STANDARD ================
+
+The final plan must be detailed enough that a delivery manager, engineering
+lead, QA lead, security lead, DevOps engineer, and project stakeholder can
+understand what happens, when it happens, who is responsible, and what proves
+completion.
+
+Prefer concrete activities, tables, sequencing, dependencies, owners, and exit
+criteria over generic project-management language.
+
+The plan must clearly connect:
+
+Business Scope
+→ Implementation Work
+→ Team
+→ Dependencies
+→ Timeline
+→ Testing
+→ Production Readiness
+→ Go-Live
 """
 
     return Task(
         description=description,
         expected_output=(
-            "An exhaustive Delivery and Implementation Plan containing agile governance models, "
-            "workstream breakdowns, staffing matrices, phase-by-phase milestone roadmaps with exit criteria, "
-            "testing strategies, and a comprehensive risk register."
+            "A rigorous, execution-ready Delivery and Implementation Plan covering "
+            "delivery methodology, MVP-to-work mapping, detailed implementation "
+            "workstreams, realistic staffing and role allocation, staffing "
+            "feasibility, phased delivery, sprint/iteration sequencing, critical "
+            "path and dependencies, effort and complexity, testing and quality "
+            "gates, security and production readiness, deployment and go-live, "
+            "project-specific risks and mitigations, and post-MVP evolution. "
+            "The plan must fit within the hard delivery timeline and remain "
+            "consistent with the upstream Business Analyst, Solution Architect, "
+            "and Technology Advisor decisions."
         ),
         agent=agent,
         context=context_tasks,

@@ -14,43 +14,344 @@ def create_solution_architect_task(
     agent = create_solution_architect()
 
     description = f"""
-Design a comprehensive, production-grade System Architecture Blueprint based on the Business Analyst requirements.
+Design a rigorous, production-ready high-level System Architecture for the
+solution defined by the Business Analyst.
+
+The Business Analyst deliverable is the authoritative business requirements
+baseline. Use it as the source for business scope, user journeys, functional
+requirements, NFRs, business rules, MVP boundaries, dependencies, and risks.
 
 ================ USER CONSTRAINTS ================
-Technology Preference: {technology_preference}
-Cloud Infrastructure Preference: {cloud_preference}
-Expected Daily Traffic: {expected_daily_traffic}
-Delivery Timeline: {delivery_timeline_months} months
-Data Hosting Country / Region: {data_hosting_country}
 
-================ DELIVERABLES REQUIRED ================
-1. Architectural Style & Design Rationale (Modular Monolith / Microservices / Event-Driven)
-2. Core Component Topology & Responsibility Matrix (Table format)
-3. Step-by-Step Data Flow & Request Lifecycles (Synchronous APIs & Asynchronous pipelines)
-4. Storage, Cache & Data Consistency Model
-5. Security Perimeter, IAM & Data Residency Controls (for {data_hosting_country})
-6. Resilience, Scalability & Failover Patterns (handling {expected_daily_traffic})
-7. Detailed High-Level Mermaid System Architecture Diagram
-   - Use valid Mermaid syntax.
-   - Start with `flowchart TD`.
-   - Show the major components and their connections.
-   - Show important request/data flows.
-   - Keep the diagram consistent with the architecture.
-   - Do NOT generate ASCII art.
-   - Do NOT generate an image.
-   - Return valid Mermaid syntax for this section.
-8. Over-Engineering Safeguards & Deferred Architecture Patterns
+Technology Preference:
+{technology_preference}
 
-Build strictly upon the Business Analyst's requirements. Maintain high technical depth and architectural clarity.
+Cloud Infrastructure Preference:
+{cloud_preference}
+
+Expected Daily Traffic:
+{expected_daily_traffic}
+
+Delivery Timeline:
+{delivery_timeline_months} months
+
+Data Hosting Country / Region:
+{data_hosting_country}
+
+================ ARCHITECTURE OBJECTIVE ================
+
+Translate the approved requirements into an implementable architecture.
+
+The architecture must balance:
+- business requirements
+- MVP scope
+- expected scale
+- security and privacy
+- reliability and resilience
+- integration complexity
+- data residency
+- operational simplicity
+- delivery timeline
+
+Do not blindly choose the most complex architecture.
+Do not introduce unnecessary distributed systems, services, or infrastructure.
+
+Technology selection belongs primarily to the Technology Advisor. You may
+describe technology-independent architectural capabilities and patterns, but
+do not turn this task into a vendor/product selection exercise.
+
+================ REQUIRED ANALYSIS ================
+
+1. ARCHITECTURAL OBJECTIVE & PRINCIPLES
+
+Explain:
+- what the architecture must enable
+- the most important architectural constraints
+- the principles guiding the design
+- what is intentionally optimized for the MVP
+- what is deliberately deferred
+
+2. ARCHITECTURE STYLE DECISION
+
+Evaluate the viable architectural styles for this problem, such as:
+- modular monolith
+- service-oriented / modular services
+- event-driven architecture
+- microservices where justified
+
+Compare relevant alternatives against the actual requirements using factors such
+as:
+- delivery speed
+- engineering complexity
+- operational burden
+- scalability
+- reliability
+- security
+- maintainability
+- integration complexity
+- team capability
+- long-term evolution
+
+Then document the selected architectural style and why it fits this project.
+
+Do not manufacture alternatives that are not relevant.
+
+3. COMPONENT TOPOLOGY
+
+Define the major logical components and their responsibilities.
+
+Use:
+
+| Component | Responsibility | Inputs | Outputs | Dependencies | Trust / Data Boundary |
+
+Explain why each major component exists and which requirements it supports.
+
+Do not create components merely for organizational decoration.
+
+4. END-TO-END REQUEST & DATA FLOWS
+
+Describe the important runtime flows step by step.
+
+Cover relevant:
+- user-to-system requests
+- API flows
+- synchronous interactions
+- asynchronous processing
+- external integrations
+- failure paths
+- retries
+- idempotency
+- timeout handling
+- long-running/background work
+
+For important flows, explain:
+1. trigger
+2. entry point
+3. components involved
+4. data movement
+5. persistence
+6. downstream effects
+7. response / completion behavior
+8. failure and recovery behavior
+
+5. DATA ARCHITECTURE & CONSISTENCY
+
+Define the logical data architecture.
+
+Explain:
+- major data domains / entities
+- ownership boundaries
+- authoritative source of each important data set
+- transactional boundaries
+- consistency expectations
+- read/write patterns
+- caching requirements
+- synchronization requirements
+- auditability
+- retention / deletion implications
+- backup and recovery implications
+
+Keep this implementation-independent where concrete database choices are
+not yet required.
+
+6. SECURITY & TRUST BOUNDARIES
+
+Design the security architecture around the actual requirements.
+
+Cover relevant:
+- identity and authentication
+- authorization
+- service-to-service trust
+- privileged access
+- secret handling
+- encryption boundaries
+- sensitive-data protection
+- audit logging
+- threat boundaries
+- least privilege
+- abuse / fraud controls where relevant
+
+Make security controls concrete enough for the Technology Advisor and Delivery
+Planner to implement later.
+
+7. DATA RESIDENCY & REGULATORY ARCHITECTURE
+
+For the specified hosting country / region, explain:
+- which data must remain within the jurisdiction
+- where processing may occur
+- what architectural boundaries are needed
+- implications for backups, logs, analytics, integrations, and disaster recovery
+- unresolved legal/compliance questions
+
+Do not invent regulations. When a regulatory conclusion requires verification,
+identify it as a research item or assumption.
+
+8. SCALABILITY & CAPACITY DESIGN
+
+Evaluate the stated traffic and scale requirements.
+
+Explain:
+- expected load characteristics
+- likely bottlenecks
+- horizontal vs. vertical scaling needs
+- stateless/stateful boundaries
+- caching strategy
+- asynchronous workload isolation
+- database scaling considerations
+- rate limiting / backpressure where relevant
+- capacity risks
+
+Avoid unsupported precision. Use calculations only where the input supports
+them.
+
+9. RESILIENCE, FAILURE & RECOVERY
+
+Define:
+- single points of failure
+- graceful degradation
+- retry strategy
+- timeout strategy
+- circuit-breaking where justified
+- queue/backlog handling
+- failure isolation
+- health checks
+- failover
+- backup/recovery expectations
+- recovery considerations
+
+Explain what happens when critical dependencies fail.
+
+10. INTEGRATION ARCHITECTURE
+
+For important external systems, define:
+- integration boundary
+- protocol/interface type where known
+- data exchanged
+- ownership
+- synchronous vs asynchronous behavior
+- authentication/trust model
+- failure handling
+- retry/idempotency expectations
+- dependency risks
+
+Do not invent integrations that are not supported by the Business Analyst
+requirements.
+
+11. DEPLOYMENT TOPOLOGY
+
+Describe the logical deployment model across:
+- development
+- test/staging
+- production
+
+Explain:
+- application boundaries
+- network/security boundaries
+- external services
+- configuration/secrets
+- observability
+- scaling boundaries
+- deployment dependencies
+- environment isolation
+
+Keep concrete cloud-product mapping for the Technology Advisor unless already
+required by user constraints.
+
+12. ARCHITECTURE TRADE-OFFS & DEFERRED PATTERNS
+
+Explicitly document important trade-offs.
+
+For each major architectural decision, explain:
+- decision
+- reason
+- benefit
+- cost / drawback
+- requirement supported
+- risk introduced
+- mitigation
+
+Also document architecture patterns deliberately NOT used for the MVP and why.
+
+Examples may include:
+- unnecessary microservices
+- service mesh
+- excessive event choreography
+- multi-region active-active
+- polyglot persistence
+- premature platform engineering
+
+Only mention patterns that are relevant to the actual solution.
+
+13. ARCHITECTURE VALIDATION
+
+Challenge the proposed architecture before finalizing it.
+
+Check it against:
+- Business Analyst requirements
+- MVP scope
+- traffic / scale
+- delivery timeline
+- security requirements
+- data residency
+- integration complexity
+- operational burden
+- team feasibility
+
+Identify contradictions, bottlenecks, missing dependencies, and assumptions.
+
+Where something cannot be resolved from the current requirements, state the
+open question instead of inventing an answer.
+
+================ AUTHORITATIVE MERMAID DIAGRAM ================
+
+Produce exactly ONE high-level authoritative architecture diagram.
+
+Requirements:
+- valid Mermaid syntax
+- must start with `flowchart TD`
+- show the major logical components
+- show important relationships and major data/request flows
+- remain consistent with the written architecture
+- do not use ASCII art
+- do not generate an image
+
+The Mermaid diagram represents the authoritative system topology.
+
+================ AUTHORING RULES ================
+
+The architecture document must be detailed and decision-oriented.
+
+Explain the "what, why, and how" of important architectural choices.
+
+Do not:
+- choose specific programming languages unless explicitly required
+- choose specific databases or vendors as the primary task
+- redesign the business scope
+- ignore the stated timeline
+- invent unsupported requirements
+- add complexity without justification
+
+Prefer concrete architecture explanations, responsibility tables, flow
+descriptions, and explicit trade-offs over generic architecture vocabulary.
+
+The final architecture must be realistic for the stated MVP and should provide a
+clear foundation for the Technology Advisor and Delivery Planner.
 """
 
     return Task(
         description=description,
         expected_output=(
-            "A comprehensive System Architecture Blueprint containing detailed component topologies, "
-            "step-by-step data flows, security and data residency controls, resilience patterns, "
-            "and a valid Mermaid architecture diagram using flowchart TD syntax."
+            "A rigorous System Architecture Blueprint covering architectural "
+            "style and trade-offs, component topology and responsibilities, "
+            "step-by-step request and data flows, logical data architecture and "
+            "consistency, security and trust boundaries, data residency, "
+            "scalability and resilience, integration architecture, deployment "
+            "topology, deferred architecture patterns, validation findings, "
+            "and exactly one valid authoritative Mermaid flowchart TD diagram. "
+            "The architecture must be traceable to the Business Analyst "
+            "requirements and realistic for the stated traffic and delivery "
+            "timeline."
         ),
         agent=agent,
-        context=[ba_task]
+        context=[ba_task],
     )

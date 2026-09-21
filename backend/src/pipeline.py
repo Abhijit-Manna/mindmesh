@@ -29,13 +29,17 @@ async def execute_step_with_eval(
     enable_eval: bool,
     eval_threshold: float,
     max_retries: int,
+    upstream_context: str = "",
 ) -> str:
     """
-    Executes a single agent step in a worker thread, optionally evaluates the deliverable,
-    and applies bounded remediation retries if quality threshold is not met.
-    Emits real-time SSE events via event_queue.
+    Execute one specialist agent with an optional evaluator quality gate.
+
+    The same Task object is reused across retries so evaluator remediation
+    updates the actual task being retried.
     """
     task = task_factory_fn()
+    base_task_description = task.description
+
     retries = 0
     final_output = ""
 
@@ -63,7 +67,8 @@ async def execute_step_with_eval(
             "agent": agent_name,
             "step": step_num,
             "total": total_steps,
-            "message": f"Quality Auditor evaluating {agent_name} output against role criteria...",
+            "message": (f"Quality Auditor evaluating {agent_name} "
+                        "output against role criteria..."),
             "progress": start_pct + 3,
         })
 
@@ -72,10 +77,22 @@ async def execute_step_with_eval(
             agent_output=final_output,
             inputs=inputs,
             threshold=eval_threshold,
+            upstream_context=upstream_context,
         )
 
-        score = eval_res.get("score", 0.85)
-        passed = eval_res.get("passed", True)
+        try:
+            score = float(eval_res.get("score", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            score = 0.0
+
+        raw_passed = eval_res.get("passed", False)
+
+        if isinstance(raw_passed, bool):
+            passed = raw_passed
+        elif isinstance(raw_passed, str):
+            passed = raw_passed.strip().lower() == "true"
+        else:
+            passed = False
 
         await event_queue.put({
             "event": "evaluation",
@@ -86,7 +103,8 @@ async def execute_step_with_eval(
             "summary": eval_res.get("summary", ""),
             "critique": eval_res.get("critique", []),
             "remediation": eval_res.get("remediation_guidance", ""),
-            "message": f"Evaluator Score: {score:.2f} — {'Accepted' if passed else 'Refinement Suggested'}",
+            "message": (f"Evaluator Score: {score:.2f} — "
+                        f"{'Accepted' if passed else 'Refinement Suggested'}"),
             "progress": start_pct + 6,
         })
 
@@ -94,12 +112,32 @@ async def execute_step_with_eval(
             break
 
         retries += 1
+        remediation_guidance = str(
+            eval_res.get("remediation_guidance", "") or ""
+        ).strip()
+
+        if remediation_guidance and remediation_guidance.lower() != "none":
+            task.description = (
+                base_task_description
+                + "\n\n"
+                + "==============================================================\n"
+                + "LATEST EVALUATOR REMEDIATION\n"
+                + "==============================================================\n"
+                + remediation_guidance
+                + "\n\n"
+                + "Revise the deliverable according to this evaluator feedback.\n"
+                + "Preserve valid work and correct the identified deficiencies.\n"
+                + "The user's original requirements and constraints remain the "
+                  "highest priority."
+            )
+
         await event_queue.put({
             "event": "agent_retry",
             "agent": agent_name,
             "step": step_num,
             "retry_count": retries,
-            "message": f"Refining {agent_name} output based on evaluator critique (Attempt {retries}/{max_retries})...",
+            "message": (f"Refining {agent_name} output based on evaluator critique "
+                        f"(Attempt {retries}/{max_retries})..."),
             "progress": start_pct + 7,
         })
 
@@ -151,15 +189,23 @@ async def run_agents_step_by_step(
             # -------------------------------------------------------------
             # STEP 1: BUSINESS ANALYST
             # -------------------------------------------------------------
+            
+            ba_task = None
+
             def make_ba_task():
-                return create_business_analyst_task(
-                    business_idea=business_idea,
-                    technology_preference=technology_preference,
-                    cloud_preference=cloud_preference,
-                    expected_daily_traffic=expected_daily_traffic,
-                    delivery_timeline_months=delivery_timeline_months,
-                    data_hosting_country=data_hosting_country,
-                )
+                nonlocal ba_task
+
+                if ba_task is None:
+                    ba_task = create_business_analyst_task(
+                        business_idea=business_idea,
+                        technology_preference=technology_preference,
+                        cloud_preference=cloud_preference,
+                        expected_daily_traffic=expected_daily_traffic,
+                        delivery_timeline_months=delivery_timeline_months,
+                        data_hosting_country=data_hosting_country,
+                    )
+
+                return ba_task
 
             ba_output = await execute_step_with_eval(
                 agent_name="Business Analyst",
@@ -168,7 +214,8 @@ async def run_agents_step_by_step(
                 total_steps=total_steps,
                 task_factory_fn=make_ba_task,
                 inputs=inputs,
-                start_msg="Analyzing business idea, identifying stakeholders, non-functional requirements, and core MVP scope...",
+                start_msg=("Analyzing business idea, identifying stakeholders, "
+                           "non-functional requirements, and core MVP scope..."),
                 complete_msg="Business analysis and functional requirements established.",
                 start_pct=5,
                 complete_pct=22,
@@ -176,23 +223,30 @@ async def run_agents_step_by_step(
                 enable_eval=enable_eval,
                 eval_threshold=eval_threshold,
                 max_retries=max_retries,
+                upstream_context="",
             )
 
-            # Anchor task object for downstream agent context propagation
-            ba_task = make_ba_task()
+           
 
             # -------------------------------------------------------------
             # STEP 2: SOLUTION ARCHITECT
             # -------------------------------------------------------------
+            sa_task = None
+
             def make_sa_task():
-                return create_solution_architect_task(
-                    technology_preference=technology_preference,
-                    cloud_preference=cloud_preference,
-                    expected_daily_traffic=expected_daily_traffic,
-                    delivery_timeline_months=delivery_timeline_months,
-                    data_hosting_country=data_hosting_country,
-                    ba_task=ba_task,
-                )
+                nonlocal sa_task
+
+                if sa_task is None:
+                    sa_task = create_solution_architect_task(
+                        technology_preference=technology_preference,
+                        cloud_preference=cloud_preference,
+                        expected_daily_traffic=expected_daily_traffic,
+                        delivery_timeline_months=delivery_timeline_months,
+                        data_hosting_country=data_hosting_country,
+                        ba_task=ba_task,
+                    )
+
+                return sa_task
 
             sa_output = await execute_step_with_eval(
                 agent_name="Solution Architect",
@@ -201,7 +255,10 @@ async def run_agents_step_by_step(
                 total_steps=total_steps,
                 task_factory_fn=make_sa_task,
                 inputs=inputs,
-                start_msg="Designing component interaction diagrams, data flows, scalability patterns, and security perimeter...",
+                start_msg=(
+                    "Designing component interaction diagrams, data flows, "
+                    "scalability patterns, and security perimeter..."
+                ),
                 complete_msg="High-level architecture and system components finalized.",
                 start_pct=24,
                 complete_pct=44,
@@ -209,24 +266,33 @@ async def run_agents_step_by_step(
                 enable_eval=enable_eval,
                 eval_threshold=eval_threshold,
                 max_retries=max_retries,
+                upstream_context=(
+                    "BUSINESS ANALYST OUTPUT:\n\n"
+                    + ba_output
+                ),
             )
 
-            # Anchor task object for downstream agent context propagation
-            sa_task = make_sa_task()
 
             # -------------------------------------------------------------
             # STEP 3: TECHNOLOGY ADVISOR
             # -------------------------------------------------------------
+            ta_task = None
+
             def make_ta_task():
-                return create_technology_advisor_task(
-                    technology_preference=technology_preference,
-                    cloud_preference=cloud_preference,
-                    expected_daily_traffic=expected_daily_traffic,
-                    delivery_timeline_months=delivery_timeline_months,
-                    data_hosting_country=data_hosting_country,
-                    ba_task=ba_task,
-                    sa_task=sa_task,
-                )
+                nonlocal ta_task
+
+                if ta_task is None: 
+                    ta_task = create_technology_advisor_task(
+                        technology_preference=technology_preference,
+                        cloud_preference=cloud_preference,
+                        expected_daily_traffic=expected_daily_traffic,
+                        delivery_timeline_months=delivery_timeline_months,
+                        data_hosting_country=data_hosting_country,
+                        ba_task=ba_task,
+                        sa_task=sa_task,
+                    )
+
+                return ta_task  
 
             ta_output = await execute_step_with_eval(
                 agent_name="Technology Advisor",
@@ -235,7 +301,10 @@ async def run_agents_step_by_step(
                 total_steps=total_steps,
                 task_factory_fn=make_ta_task,
                 inputs=inputs,
-                start_msg="Evaluating technology stack trade-offs, databases, cloud services, and framework trade-offs...",
+                start_msg=(
+                    "Evaluating technology stack trade-offs, databases, "
+                    "cloud services, and framework trade-offs..."
+                ),
                 complete_msg="Technology recommendations and trade-off analysis completed.",
                 start_pct=46,
                 complete_pct=66,
@@ -243,21 +312,31 @@ async def run_agents_step_by_step(
                 enable_eval=enable_eval,
                 eval_threshold=eval_threshold,
                 max_retries=max_retries,
+                upstream_context=(
+                    "SOLUTION ARCHITECT OUTPUT:\n\n"
+                    + sa_output
+                ),
             )
 
-            # Anchor task object for downstream agent context propagation
-            ta_task = make_ta_task()
+            
 
             # -------------------------------------------------------------
             # STEP 4: DELIVERY PLANNER
             # -------------------------------------------------------------
+            dp_task = None
+
             def make_dp_task():
-                return create_delivery_planner_task(
-                    delivery_timeline_months=delivery_timeline_months,
-                    ba_task=ba_task,
-                    sa_task=sa_task,
-                    ta_task=ta_task,
-                )
+                nonlocal dp_task
+
+                if dp_task is None:
+                    dp_task = create_delivery_planner_task(
+                        delivery_timeline_months=delivery_timeline_months,
+                        ba_task=ba_task,
+                        sa_task=sa_task,
+                        ta_task=ta_task,
+                    )
+
+                return dp_task
 
             dp_output = await execute_step_with_eval(
                 agent_name="Delivery Planner",
@@ -266,7 +345,10 @@ async def run_agents_step_by_step(
                 total_steps=total_steps,
                 task_factory_fn=make_dp_task,
                 inputs=inputs,
-                start_msg="Synthesizing delivery workstreams, sprint milestones, team allocation, and risk mitigations...",
+                start_msg=(
+                    "Synthesizing delivery workstreams, sprint milestones, "
+                    "team allocation, and risk mitigations..."
+                ),
                 complete_msg="Delivery roadmap, milestones, and risk register complete.",
                 start_pct=68,
                 complete_pct=88,
@@ -274,36 +356,64 @@ async def run_agents_step_by_step(
                 enable_eval=enable_eval,
                 eval_threshold=eval_threshold,
                 max_retries=max_retries,
+                upstream_context=(
+                    "SOLUTION ARCHITECT OUTPUT:\n\n"
+                    + sa_output
+                    + "\n\n"
+                    + "TECHNOLOGY ADVISOR OUTPUT:\n\n"
+                    + ta_output
+                    ),
             )
 
-            # Anchor task object for downstream agent context propagation
-            dp_task = make_dp_task()
+            
 
             # -------------------------------------------------------------
             # STEP 5: REPORT WRITER AGENT (Final Synthesis)
             # -------------------------------------------------------------
-            await event_queue.put({
-                "event": "agent_start",
-                "agent": "Report Writer",
-                "step": 5,
-                "total": total_steps,
-                "role": "Lead Solution Consultant & Technical Writer",
-                "message": "Synthesizing all specialist findings into the authoritative Master Solution Blueprint...",
-                "progress": 90,
-            })
+            def make_rw_task():
+                return create_report_writer_task(
+                    inputs=inputs,
+                    ba_task=ba_task,
+                    sa_task=sa_task,
+                    ta_task=ta_task,
+                    dp_task=dp_task,
+                    ba_output=ba_output,
+                    sa_output=sa_output,
+                    ta_output=ta_output,
+                    dp_output=dp_output,
+                )
 
-            rw_task = create_report_writer_task(
+            rw_output = await execute_step_with_eval(
+                agent_name="Report Writer",
+                role="Lead Solution Consultant & Technical Writer",
+                step_num=5,
+                total_steps=total_steps,
+                task_factory_fn=make_rw_task,
                 inputs=inputs,
-                ba_task=ba_task,
-                sa_task=sa_task,
-                ta_task=ta_task,
-                dp_task=dp_task,
+                start_msg=(
+                    "Synthesizing all specialist findings into the authoritative "
+                    "Master Solution Blueprint..."
+                ),
+                complete_msg=(
+                    "Final solution blueprint synthesized and quality-checked."
+                ),
+                start_pct=90,
+                complete_pct=97,
+                event_queue=event_queue,
+                enable_eval=enable_eval,
+                eval_threshold=eval_threshold,
+                max_retries=max_retries,
+                upstream_context=(
+                    "BUSINESS ANALYST OUTPUT:\n\n"
+                    + ba_output
+                    + "\n\nSOLUTION ARCHITECT OUTPUT:\n\n"
+                    + sa_output
+                    + "\n\nTECHNOLOGY ADVISOR OUTPUT:\n\n"
+                    + ta_output
+                    + "\n\nDELIVERY PLANNER OUTPUT:\n\n"
+                    + dp_output
+                ),
             )
-
-            rw_crew = Crew(agents=[rw_task.agent], tasks=[rw_task], verbose=True)
-            rw_res = await asyncio.to_thread(rw_crew.kickoff)
-            rw_output = rw_res.raw if hasattr(rw_res, "raw") else str(rw_res)
-
             # Assemble the exhaustive, production-grade Master Solution Blueprint
             master_md = build_master_blueprint(
                 inputs=inputs,
@@ -326,7 +436,11 @@ async def run_agents_step_by_step(
             })
 
             # Convert to HTML presentation artifact
-            master_html = markdown_to_html(master_md, title=f"MindMesh Blueprint - {run_id}")
+            master_html = await asyncio.to_thread(
+                markdown_to_html,
+                master_md,
+                title=f"MindMesh Blueprint - {run_id}",
+            )
 
             await event_queue.put({
                 "event": "complete",

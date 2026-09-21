@@ -23,12 +23,12 @@ def parse_evaluation_json(eval_raw: str) -> Dict[str, Any]:
             return json.loads(match_raw.group(1))
         return json.loads(eval_raw)
     except Exception:
-        return {
-            "score": 0.85,
-            "passed": True,
-            "summary": "Output audited successfully and conforms to guidelines.",
-            "critique": [],
-            "remediation_guidance": "None",
+            return {
+            "score": 0.0,
+            "passed": False,
+            "summary": "Evaluator output could not be parsed.",
+            "critique": ["Evaluator returned malformed or non-JSON output."],
+            "remediation_guidance": "Re-run the evaluator and return valid JSON using the required schema.",
         }
 
 
@@ -37,6 +37,7 @@ async def evaluate_agent_output(
     agent_output: str,
     inputs: Dict[str, Any],
     threshold: float = 0.70,
+    upstream_context: str = "",
 ) -> Dict[str, Any]:
     """
     Run the quality evaluation gate on an agent's deliverable using the Evaluator agent.
@@ -47,6 +48,7 @@ async def evaluate_agent_output(
         agent_output=agent_output,
         user_constraints=inputs,
         threshold=threshold,
+        upstream_context=upstream_context,
     )
     eval_crew = Crew(agents=[eval_task.agent], tasks=[eval_task], verbose=False)
     res = await asyncio.to_thread(eval_crew.kickoff)
