@@ -69,11 +69,14 @@ def render_form_view():
 
             cur_traffic = st.session_state.form_data.get("expected_daily_traffic")
             traffic_idx = TRAFFIC_OPTIONS.index(cur_traffic) if cur_traffic in TRAFFIC_OPTIONS else 0
-            expected_daily_traffic = st.selectbox(
+            expected_daily_traffic = st.number_input(
                 "4. Expected Daily Traffic & Scale *",
-                options=TRAFFIC_OPTIONS,
-                index=traffic_idx,
+                placeholder = "Expected Daily Active Users (in Numbers) * ",
+                min_value = 0,
+                value=int(st.session_state.form_data.get("expected_daily_traffic") or 1000),
+                step = 1000,
                 help="Expected active user concurrency."
+
             )
 
         with col2:
@@ -87,13 +90,17 @@ def render_form_view():
             )
 
             cur_country = st.session_state.form_data.get("data_hosting_country")
-            country_idx = COUNTRY_OPTIONS.index(cur_country) if cur_country in COUNTRY_OPTIONS else 0
-            data_hosting_country = st.selectbox(
-                "6. Data Hosting Region / Jurisdiction *",
-                options=COUNTRY_OPTIONS,
-                index=country_idx,
-                help="Data residency compliance target."
-            )
+            #country_idx = COUNTRY_OPTIONS.index(cur_country) if cur_country in COUNTRY_OPTIONS else 0
+            # data_hosting_country = st.selectbox(
+            #     "6. Data Hosting Region / Jurisdiction *",
+            #     options=COUNTRY_OPTIONS,
+            #     index=country_idx,
+            #     help="Data residency compliance target."
+            # )
+            
+            data_hosting_country = st.text_input("6. Data Hosting Region / Jurisdiction *", 
+                value=st.session_state.form_data.get("data_hosting_country") or "",
+                placeholder = "Enter the country or region where you want your data to be hosted (e.g.: India)")
 
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         submit_btn = st.form_submit_button("Generate Architecture Blueprint", type="primary", use_container_width=True)
