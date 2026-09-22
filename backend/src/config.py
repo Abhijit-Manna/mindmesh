@@ -71,6 +71,20 @@ class Settings(BaseSettings):
     # ==========================================
     AGENT_TIMEOUT_SECONDS: int = 120
 
+    # Maximum output tokens per agent/evaluator LLM call. Agent deliverables are
+    # long (multi-section documents containing Mermaid diagrams); a small cap
+    # truncates them mid-section and can leave diagrams syntactically invalid.
+    LLM_MAX_TOKENS: int = 8192
+
+    # ==========================================
+    # Diagram Rendering
+    # ==========================================
+    # Server-side Mermaid SVG pre-rendering (via npx mmdc). When enabled,
+    # diagrams are embedded as inline SVG so the downloaded HTML renders
+    # offline. When disabled, diagrams use client-side Mermaid.js rendering
+    # (requires internet in the browser).
+    MERMAID_SSR: bool = True
+
     # ==========================================
     # Logging
     # ==========================================

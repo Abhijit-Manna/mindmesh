@@ -232,6 +232,21 @@ class FallbackLLM(BaseLLM):
 _FALLBACK_STATUS_PRINTED = False
 
 
+def _max_output_tokens() -> int:
+    """Output-token budget for a single agent/evaluator LLM call.
+
+    Agents return long, multi-section documents that contain Mermaid diagrams.
+    A small cap truncates a response mid-section, and a diagram that is cut
+    mid-``subgraph`` is no longer valid Mermaid, so it fails to render.
+    Configurable through ``LLM_MAX_TOKENS``.
+    """
+    try:
+        value = int(getattr(settings, "LLM_MAX_TOKENS", 0) or 0)
+    except (TypeError, ValueError):
+        value = 0
+    return value if value > 0 else 8192
+
+
 def _build_openrouter_fallback() -> LLM | None:
     """Build the OpenRouter fallback LLM when it is configured and enabled."""
     global _FALLBACK_STATUS_PRINTED
@@ -266,7 +281,7 @@ def _build_openrouter_fallback() -> LLM | None:
     return LLM(
         model=model,
         api_key=api_key,
-        max_tokens=16384,
+        max_tokens=_max_output_tokens(),
         temperature=0.4,
     )
 
@@ -285,7 +300,7 @@ def get_llm(
     primary = LLM(
         model=safe_model,
         api_key=safe_api_key,
-        max_tokens=16384,
+        max_tokens=_max_output_tokens(),
         temperature=temperature,
     )
 

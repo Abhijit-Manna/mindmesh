@@ -7,7 +7,46 @@ import shutil
 import markdown
 import bleach
 
-from src.blueprint_builder import _validate_and_clean_mermaid
+from src.blueprint_builder import (
+    _MERMAID_DIAGRAM_TYPES,
+    _is_renderable_mermaid,
+    _is_whitespace_corrupted,
+    _normalize_diagram_token,
+    _normalize_mermaid_fences,
+    _validate_and_clean_mermaid,
+)
+
+
+def _ssr_enabled() -> bool:
+    """Server-side SVG pre-rendering toggle (MERMAID_SSR, default on).
+
+    When disabled, diagrams skip the npx/mmdc pre-render and go straight to
+    the client-side Mermaid.js fallback (requires internet in the browser).
+    """
+    try:
+        from src.config import settings
+        return bool(getattr(settings, "MERMAID_SSR", True))
+    except Exception:
+        return os.environ.get("MERMAID_SSR", "1").strip().lower() not in (
+            "0", "false", "no", "off",
+        )
+
+
+def _looks_like_mermaid(code: str) -> bool:
+    """Heuristic: does this code block contain a Mermaid diagram?
+
+    Checks the first meaningful line for a Mermaid diagram-type keyword
+    (version suffixes such as ``stateDiagram-v2`` are normalized away).
+    Used to catch mis-tagged fences (```flowchart instead of ```mermaid)
+    while leaving genuine code samples untouched.
+    """
+    for line in code.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("%%"):
+            continue
+        first_word = _normalize_diagram_token(stripped.split(None, 1)[0])
+        return first_word in _MERMAID_DIAGRAM_TYPES
+    return False
 
 
 BLEACH_ALLOWED_TAGS = [
@@ -200,6 +239,13 @@ def _extract_mermaid_code(raw: str) -> str:
     """
     raw = raw.strip()
 
+    # Strip stray fence remnants (e.g. a doubled opener "```mermaid" or
+    # "```flowchart TD" that survived inside the block).
+    raw = "\n".join(
+        line for line in raw.splitlines()
+        if not line.strip().startswith("```")
+    ).strip()
+
     # Case 1: Markdown fenced block (may survive if called on raw markdown)
     fence_match = re.match(
         r"^```(?:mermaid)?\s*\n(.*?)\n```\s*$", raw, re.DOTALL | re.IGNORECASE
@@ -208,43 +254,104 @@ def _extract_mermaid_code(raw: str) -> str:
         return fence_match.group(1).strip()
 
     # Case 2: The text is already clean Mermaid (starts with known diagram types)
-    mermaid_keywords = (
-        "flowchart", "graph", "sequenceDiagram", "classDiagram",
-        "stateDiagram", "erDiagram", "gantt", "pie", "gitGraph",
-        "mindmap", "timeline", "quadrantChart", "xychart",
-    )
-    if any(raw.startswith(kw) for kw in mermaid_keywords):
+    first_word = _normalize_diagram_token(raw.split(None, 1)[0]) if raw else ""
+    if first_word in _MERMAID_DIAGRAM_TYPES:
         return raw
 
     return raw
 
 
+def _diagram_source_block(mermaid_code: str, note: str) -> str:
+    """Fallback for a diagram that Mermaid cannot parse.
+
+    Mermaid renders unparseable input as a large "Syntax error in text" error
+    graphic, which hides the architecture information completely. When a
+    diagram is known to be unparseable the source is shown instead, so the
+    reader still gets the content in a readable form.
+    """
+    return (
+        '<div class="diagram-fallback">'
+        f'<p class="diagram-fallback-note">{note}</p>'
+        f"<pre><code>{html_lib.escape(mermaid_code, quote=False)}</code></pre>"
+        "</div>"
+    )
+
+
+def _client_side_diagram(mermaid_code: str) -> str:
+    """Client-side Mermaid.js fallback.
+
+    The diagram source is kept next to the rendered diagram so the content is
+    never lost when the Mermaid CDN is unavailable in the browser; the
+    converter's inline script reveals it when rendering fails.
+    """
+    escaped = html_lib.escape(mermaid_code, quote=False)
+    return (
+        '<div class="diagram-container">'
+        f'<div class="mermaid">{escaped}</div>'
+        '<details class="diagram-source">'
+        "<summary>Diagram source (Mermaid)</summary>"
+        f"<pre><code>{escaped}</code></pre>"
+        "</details>"
+        "</div>"
+    )
+
+
 def convert_mermaid_blocks(html: str) -> str:
     """
-    Find Mermaid fenced-code blocks that the Markdown library converted to
-    ``<pre><code class="language-mermaid">...</code></pre>`` and replace them
-    with either:
+    Find fenced-code blocks that the Markdown library converted to
+    ``<pre><code class="language-...">...</code></pre>`` and replace Mermaid
+    diagrams with either:
       - An inline ``<svg>`` (pre-rendered server-side via npx mmdc), wrapped in
         a styled ``<div class="architecture-diagram">``, OR
       - A ``<div class="mermaid">`` fallback for client-side Mermaid.js rendering
         if server-side conversion is unavailable or fails.
+
+    Any language class is accepted (language-mermaid, language-flowchart,
+    ...) — the block content decides: only blocks whose first meaningful
+    line is a Mermaid diagram keyword are converted, so genuine code samples
+    are left untouched.
     """
-    pattern = r'<pre><code class="language-mermaid">(.*?)</code></pre>'
+    pattern = r'<pre><code(?: class="language-([^"]*)")?>(.*?)</code></pre>'
 
     def replace_mermaid(match: re.Match) -> str:
-        raw_code = match.group(1)
+        lang = (match.group(1) or "").strip().lower()
+        raw_code = match.group(2)
 
         # Decode HTML entities introduced by the Markdown library
         mermaid_code = html_lib.unescape(raw_code)
         mermaid_code = _extract_mermaid_code(mermaid_code)
 
+        if not (
+            _looks_like_mermaid(mermaid_code)
+            or _is_whitespace_corrupted(mermaid_code)
+        ):
+            # Not a diagram (genuine code sample): leave untouched.
+            # Whitespace-corrupted diagrams ('flowchart_TD_____subgraph_...')
+            # hide their diagram keyword from _looks_like_mermaid, so they
+            # are admitted through the gate as well and repaired by the
+            # cleaner below — otherwise they stay in the document as broken
+            # code boxes instead of rendered diagrams.
+            return match.group(0)
+
         # Repair/normalize the diagram (fixes LLM whitespace corruption such
         # as 'flowchart_TD_____subgraph_...' and preserves non-flowchart
         # diagram types) before attempting to render it.
         mermaid_code = _validate_and_clean_mermaid(mermaid_code)
+        if not mermaid_code:
+            return match.group(0)
 
-        # Attempt server-side SVG pre-rendering
-        svg = mermaid_to_svg(mermaid_code)
+        # A diagram Mermaid cannot parse at all (no diagram type, unclosed
+        # 'subgraph', ...) is never handed to the renderer: it would come back
+        # as Mermaid's "Syntax error in text" artwork. Show its source instead.
+        if not _is_renderable_mermaid(mermaid_code):
+            return _diagram_source_block(
+                mermaid_code,
+                "This diagram could not be rendered, so its Mermaid source is "
+                "shown instead.",
+            )
+
+        # Attempt server-side SVG pre-rendering (unless MERMAID_SSR=0).
+        svg = mermaid_to_svg(mermaid_code) if _ssr_enabled() else None
         if svg:
             return (
                 '<div class="architecture-diagram" '
@@ -254,12 +361,8 @@ def convert_mermaid_blocks(html: str) -> str:
                 "</div>"
             )
 
-        # Fallback: client-side rendering via Mermaid.js CDN script in <head>
-        return (
-            '<div class="mermaid">'
-            f"{html_lib.escape(mermaid_code, quote=False)}"
-            "</div>"
-        )
+        # Fallback: client-side rendering via Mermaid.js CDN script in <head>.
+        return _client_side_diagram(mermaid_code)
 
     return re.sub(pattern, replace_mermaid, html, flags=re.DOTALL)
 
@@ -275,6 +378,11 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
     """
     clean_markdown = remove_emojis(markdown_text)
     clean_title = remove_emojis(title)
+
+    # Normalize diagram fences BEFORE markdown processing so every diagram
+    # becomes a clean, balanced ```mermaid block (fixes ```flowchart tags,
+    # unbalanced fence pairs, and indented fences from LLM output).
+    clean_markdown = _normalize_mermaid_fences(clean_markdown)
 
     # Convert LaTeX math in prose BEFORE markdown processing
     clean_markdown = _convert_latex_to_text(clean_markdown)
@@ -308,10 +416,35 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
 
     mermaid.initialize({{
-        startOnLoad: true,
+        startOnLoad: false,
         theme: "default",
-        securityLevel: "strict"
+        securityLevel: "strict",
+        // Never inject Mermaid's "Syntax error in text" artwork into the
+        // document. Failures are handled below and the diagram source stays
+        // readable instead of a large error graphic.
+        suppressErrorRendering: true
     }});
+
+    // Render every diagram on its own so one broken diagram cannot affect the
+    // others, and reveal the Mermaid source of any diagram that fails.
+    (async function renderDiagrams() {{
+        const diagrams = Array.from(document.querySelectorAll(".mermaid"));
+        for (const diagram of diagrams) {{
+            try {{
+                await mermaid.run({{ nodes: [diagram], suppressErrors: true }});
+            }} catch (error) {{
+                console.error("MindMesh: Mermaid rendering failed", error);
+            }}
+            if (!diagram.querySelector("svg")) {{
+                const container = diagram.closest(".diagram-container");
+                if (container) {{
+                    container.classList.add("mermaid-render-error");
+                    const source = container.querySelector(".diagram-source");
+                    if (source) {{ source.open = true; }}
+                }}
+            }}
+        }}
+    }})();
 </script>
 
 
@@ -544,6 +677,63 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
         .architecture-diagram svg {{
             max-width: 100%;
             height: auto;
+        }}
+
+        /* Client-side rendered diagram — source kept alongside the render */
+        .diagram-container {{
+            overflow-x: auto;
+            margin: 24px 0;
+            padding: 16px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+        }}
+
+        .diagram-container svg {{
+            max-width: 100%;
+            height: auto;
+        }}
+
+        .diagram-container .diagram-source {{
+            margin-top: 12px;
+            text-align: left;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }}
+
+        .diagram-container .diagram-source summary {{
+            cursor: pointer;
+        }}
+
+        .diagram-container .diagram-source pre {{
+            margin: 10px 0 0 0;
+            text-align: left;
+        }}
+
+        .diagram-container.mermaid-render-error .diagram-source summary {{
+            color: #b91c1c;
+            font-weight: 600;
+        }}
+
+        /* Diagram whose Mermaid source cannot be rendered at all */
+        .diagram-fallback {{
+            margin: 24px 0;
+            padding: 16px;
+            background: #fff7ed;
+            border: 1px solid #fdba74;
+            border-radius: 8px;
+        }}
+
+        .diagram-fallback-note {{
+            margin-bottom: 12px;
+            color: #9a3412;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }}
+
+        .diagram-fallback pre {{
+            margin: 0;
         }}
 
         /* Footer */

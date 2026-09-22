@@ -599,6 +599,7 @@ All backend settings are loaded from `backend/.env` through `pydantic-settings`.
 | `ENABLE_EVALUATION` | No | `true` | Enables evaluator quality gates |
 | `EVALUATION_THRESHOLD` | No | `0.70` | Minimum score required to pass |
 | `AGENT_TIMEOUT_SECONDS` | No | `120` | Configured agent runtime budget |
+| `MERMAID_SSR` | No | `true` | Pre-render diagrams to inline SVG so downloaded HTML works offline |
 | `LOG_LEVEL` | No | `INFO` | Application logging setting |
 
 ## Development notes

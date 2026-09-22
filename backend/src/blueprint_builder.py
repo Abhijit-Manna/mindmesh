@@ -12,7 +12,25 @@ _MERMAID_DIAGRAM_TYPES = (
     "flowchart", "graph", "sequencediagram", "classdiagram",
     "statediagram", "erdiagram", "gitgraph", "gantt", "pie",
     "mindmap", "timeline", "quadrantchart", "xychart", "journey",
+    "requirementdiagram", "c4context", "c4container", "c4component",
+    "c4dynamic", "c4deployment", "sankey", "block", "packet", "kanban",
+    "architecture", "radar", "treemap", "venn", "ishikawa", "zenuml",
 )
+
+
+def _normalize_diagram_token(token: str) -> str:
+    """Normalize a Mermaid diagram-type keyword for comparison.
+
+    Lowercases the keyword and strips version/experimental suffixes so
+    variants such as ``stateDiagram-v2``, ``classDiagram-v2`` or
+    ``xychart-beta`` are recognised as their base diagram type. Without this,
+    those diagrams are mistaken for flowcharts and get a bogus
+    ``flowchart TD`` header plus flowchart-only rewrites, which breaks their
+    rendering entirely.
+    """
+    normalized = token.strip().lower().rstrip(";")
+    normalized = re.sub(r"-(?:v\d+|beta|alpha|experimental)$", "", normalized)
+    return normalized
 
 
 def _first_meaningful_line(diagram: str) -> str:
@@ -30,7 +48,7 @@ def _detect_mermaid_type(diagram: str) -> str | None:
     first_line = _first_meaningful_line(diagram)
     if not first_line:
         return None
-    first_word = first_line.split(None, 1)[0].lower()
+    first_word = _normalize_diagram_token(first_line.split(None, 1)[0])
     if first_word in _MERMAID_DIAGRAM_TYPES:
         return first_word
     return None
@@ -48,7 +66,7 @@ def _is_whitespace_corrupted(diagram: str) -> bool:
     first_line = _first_meaningful_line(diagram)
     if not first_line:
         return False
-    first_word = first_line.split(None, 1)[0].lower()
+    first_word = _normalize_diagram_token(first_line.split(None, 1)[0])
     for keyword in _MERMAID_DIAGRAM_TYPES:
         if first_word.startswith(keyword + "_"):
             return True
@@ -109,6 +127,282 @@ def _strip_bogus_flowchart_header(diagram: str) -> str:
     return diagram
 
 
+# ---------------------------------------------------------------------------
+# Mermaid statement recognition
+#
+# Used to decide whether a *trailing* line still belongs to a diagram. The
+# matcher must accept every legal Mermaid construct: a matcher that rejects a
+# valid statement truncates the diagram (see _strip_trailing_non_diagram_lines).
+# ---------------------------------------------------------------------------
+
+# Keywords that may begin a Mermaid statement.
+_MERMAID_STATEMENT_KEYWORDS = frozenset({
+    "flowchart", "graph", "subgraph", "end", "classdef", "class", "click",
+    "linkstyle", "style", "direction", "note", "autonumber", "title",
+    "section", "dateformat", "axisformat", "todaymarker", "excludes",
+    "includes", "acctitle", "accdescr",
+})
+
+# Any legal flowchart link/edge operator (dashed, thick, open, crossed, ...).
+_MERMAID_LINK_OPERATOR_RE = re.compile(
+    r"(-->|---|--o|--x|-\.-|-\.->|-\.o|-\.x|\.\.>|==>|===|<-->|<->|->|<-|<--)"
+)
+
+# A statement that starts with one or more node references (optionally chained
+# with '&') followed by a shape bracket, a link operator, or a class shortcut.
+_MERMAID_NODE_STATEMENT_RE = re.compile(
+    r"""^
+        \s*
+        (?:"[^"]*"|[A-Za-z_][A-Za-z0-9_\-.]*|\[[^\]]*\]|\([^)]*\)|\{[^}]*\})
+        (?:\s*&\s*(?:"[^"]*"|[A-Za-z_][A-Za-z0-9_\-.]*))?     # A & B & C
+        \s*
+        (?::{3}|\[|\(|\{|-->|---|--o|--x|-\.-|-\.->|\.\.>|==>|===|->|<-|<--)
+    """,
+    re.VERBOSE,
+)
+
+
+def _looks_like_mermaid_statement(line: str) -> bool:
+    """Return True when *line* looks like a Mermaid statement.
+
+    Deliberately broad: blank lines, comments, every link/edge operator, node
+    chains (``A & B --> C``), ``classDef``/``style``/``Note`` statements, and
+    any line containing an edge operator are accepted. Only prose and Markdown
+    structure (sentences, headings, bullets, fences) are rejected.
+    """
+    stripped = line.strip()
+    if not stripped:
+        return True                      # blank separator between blocks
+    if stripped.startswith("%%"):
+        return True                      # Mermaid comment
+    first_word = stripped.split(None, 1)[0].lower().rstrip(";:")
+    if _normalize_diagram_token(first_word) in _MERMAID_DIAGRAM_TYPES:
+        return True
+    if first_word in _MERMAID_STATEMENT_KEYWORDS:
+        return True
+    if _MERMAID_NODE_STATEMENT_RE.match(stripped):
+        return True
+    if _MERMAID_LINK_OPERATOR_RE.search(stripped):
+        return True
+    # Sequence/ER/state/gantt style statements, e.g. "Alice->>Bob: Hi".
+    if re.match(r"^[A-Za-z_][A-Za-z0-9_\-.]*\s*:", stripped):
+        return True
+    return False
+
+
+def _strip_trailing_non_diagram_lines(diagram: str) -> str:
+    """Drop prose/Markdown that the LLM appended *after* the diagram.
+
+    Only trailing lines are examined and only until the first line that looks
+    like Mermaid, so interior diagram content is never removed. This replaces
+    the earlier "stop at the first unrecognised line" behaviour, which
+    silently deleted the rest of a valid diagram whenever it contained Mermaid
+    syntax the matcher did not know (``A -.-> B``, ``A -- "label" --> B``,
+    ``A & B --> C``, ``%% comment``, ``Note over A: text`` ...).
+    """
+    lines = diagram.split("\n")
+    while lines and not _looks_like_mermaid_statement(lines[-1]):
+        lines.pop()
+    return "\n".join(lines).strip()
+
+
+# Characters that Mermaid cannot parse inside an *unquoted* edge label:
+# '(' and '[' start a shape, so the parser fails with
+# "Parse error ... got 'PS'" and the whole diagram refuses to render.
+_EDGE_LABEL_HOSTILE_RE = re.compile(r"[()\[\]{},;]")
+
+# An edge label in the '|...|' form, attached to a link operator:
+#   A -->|label| B     A ---|label| B     A -.->|label| B
+# The operator is part of the pattern so labels never match inside a node
+# label such as A["x | y | z"].
+_EDGE_LABEL_RE = re.compile(
+    r"(-[.][-]>|-[.][-]|--o|--x|-->|---|==>|===)[|]([^|]+)[|]"
+)
+
+
+def _quote_edge_labels(diagram: str) -> str:
+    """Quote flowchart edge labels that Mermaid cannot parse unquoted.
+
+    ``A -->|Fetch Rate (60s)| B`` is a Mermaid *syntax error* (the
+    parenthesis starts a shape), so the diagram renders as an error instead
+    of a diagram. Quoting the label -- ``A -->|"Fetch Rate (60s)"| B`` -- is
+    valid, so labels containing shape delimiters are quoted automatically.
+    Labels that are already quoted are left untouched.
+    """
+
+    def _quote(match: re.Match) -> str:
+        operator = match.group(1)
+        label = match.group(2).strip()
+        if not label or label.startswith('"'):
+            return match.group(0)
+        if not _EDGE_LABEL_HOSTILE_RE.search(label):
+            return match.group(0)
+        quoted = label.replace('"', "#quot;")
+        return f'{operator}|"{quoted}"|'
+
+    return _EDGE_LABEL_RE.sub(_quote, diagram)
+
+
+def _repair_mermaid_arrows(diagram: str, diagram_type: str) -> str:
+    """Repair arrow spellings that Mermaid rejects at parse time.
+
+    A garbled arrow is a *hard* error: the whole diagram renders as
+    "Syntax error in text" instead of a picture, so the common LLM typos are
+    normalized here (each case confirmed against mermaid-cli):
+
+    * ``User->->Gateway`` -- a doubled arrow, invalid in every diagram type
+      (sequence error: "Expecting ... got 'SOLID_OPEN_ARROW'"). Collapsed to
+      ``->>`` in sequence-style diagrams so it pairs with the ``-->>``
+      replies, and to ``-->`` in flowcharts.
+    * ``A-->->B`` -- the same doubling around a flowchart link.
+    * ``A--->B`` -- three dashes: rejected by ``sequenceDiagram``
+      (flowcharts accept it, so flowcharts keep it).
+    * ``A->B`` in a flowchart -- flowcharts require ``-->``. Arrows inside
+      quoted node labels, shape text and ``|edge labels|`` are display
+      text, not syntax, and are left untouched.
+
+    Sequence-style diagrams deliberately do NOT get the bare-``->`` rewrite:
+    ``A->B`` is valid there (and means "solid open arrow"), so rewriting it
+    would silently change the drawing.
+    """
+    if not diagram:
+        return diagram
+
+    flowchart_like = diagram_type in ("flowchart", "graph")
+
+    if not flowchart_like:
+        # '->->' -> '->>' (doubled solid arrow; mirrors the '-->>' replies).
+        diagram = re.sub(
+            r"(?<=[\w)\]}])\s*->\s*->\s*(?=[\w(\[{\"'])",
+            "->>",
+            diagram,
+        )
+        # Any other glued run ('-->->', '->-->') collapses to its first token.
+        diagram = re.sub(
+            r"(?<=[\w)\]}])\s*((?:-->|->))(?:-->|->)+\s*(?=[\w(\[{\"'])",
+            r"\1",
+            diagram,
+        )
+        # Three or more dashes before a head ('A--->B') are not a valid
+        # sequence arrow; treat them as the dashed '-->'.
+        diagram = re.sub(
+            r"(?<=[\w)\]}])\s*-{3,}>\s*(?=[\w(\[{\"'])",
+            "-->",
+            diagram,
+        )
+        return diagram
+
+    # --- flowcharts -------------------------------------------------------
+    # Rewrites must never touch display text, so matches are rejected when
+    # they overlap a quoted label, shape body or |edge label|. Checking
+    # spans (instead of splitting the line) keeps boundary context intact:
+    # in 'A(Start)->B' the ')' closing the shape is the character before the
+    # arrow, and splitting would hide it from the lookbehind.
+    protected = [
+        (m.start(), m.end())
+        for m in re.finditer(
+            r'"[^"]*"|\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|\|[^|]*\|', diagram
+        )
+    ]
+
+    def _overlaps_display_text(match: re.Match) -> bool:
+        return any(
+            span_start < match.end() and match.start() < span_end
+            for span_start, span_end in protected
+        )
+
+    def _sub_outside_display_text(pattern: re.Pattern, replacement: str, text: str) -> str:
+        pieces: list[str] = []
+        cursor = 0
+        for match in pattern.finditer(text):
+            if _overlaps_display_text(match):
+                continue
+            pieces.append(text[cursor:match.start()])
+            pieces.append(match.expand(replacement))
+            cursor = match.end()
+        pieces.append(text[cursor:])
+        return "".join(pieces)
+
+    # Glued link tokens: 'A-->->B' -> 'A-->B'.
+    diagram = _sub_outside_display_text(
+        re.compile(r"(?<=[\w)\]}])\s*(?:-->|->){2,}"),
+        "-->",
+        diagram,
+    )
+    # Bare '->' is not a flowchart link operator: 'A->B' -> 'A-->B'.
+    diagram = _sub_outside_display_text(
+        re.compile(r"(?<=[\w)\]}])(\s*)->"),
+        r"\1-->",
+        diagram,
+    )
+    return diagram
+
+
+def _balance_subgraph_blocks(diagram: str) -> str:
+    """Close unclosed ``subgraph`` blocks and drop stray ``end`` statements.
+
+    An unclosed ``subgraph`` is a hard Mermaid syntax error, so an incomplete
+    diagram (truncated upstream, by a token limit, or by the LLM itself) would
+    otherwise render as "Syntax error in text". Balancing keeps the diagram
+    renderable while preserving every statement that was produced.
+    """
+    out: list[str] = []
+    depth = 0
+    for line in diagram.splitlines():
+        statement = line.strip()
+        first_word = statement.split(None, 1)[0].lower() if statement else ""
+        if first_word == "subgraph":
+            depth += 1
+            out.append(line)
+        elif first_word == "end":
+            if depth > 0:
+                depth -= 1
+                out.append(line)
+            # A stray 'end' has no matching 'subgraph': omitting it is
+            # equivalent to what the parser expects.
+        else:
+            out.append(line)
+
+    if depth > 0:
+        out.extend(["end"] * depth)
+
+    return "\n".join(out).strip()
+
+
+def _is_renderable_mermaid(diagram: str) -> bool:
+    """Best-effort structural check used before a diagram is embedded in HTML.
+
+    Returns False only for structures Mermaid cannot parse at all (missing
+    diagram type, or flowchart ``subgraph`` blocks that are not closed), so the
+    HTML converter can show the diagram source instead of Mermaid's
+    "Syntax error in text" error artwork.
+    """
+    if not diagram or not diagram.strip():
+        return False
+
+    diagram_type = _detect_mermaid_type(diagram)
+    if diagram_type is None:
+        return False
+
+    # 'graph' is the deprecated alias of 'flowchart' and uses the same
+    # subgraph/end structure, so it gets the same balance check.
+    if diagram_type not in ("flowchart", "graph"):
+        return True
+
+    depth = 0
+    for line in diagram.splitlines():
+        statement = line.strip()
+        first_word = statement.split(None, 1)[0].lower() if statement else ""
+        if first_word == "subgraph":
+            depth += 1
+        elif first_word == "end":
+            if depth == 0:
+                return False
+            depth -= 1
+
+    return depth == 0
+
+
 def _validate_and_clean_mermaid(diagram: str) -> str:
     """
     Conservative validation and cleanup for Mermaid syntax.
@@ -119,7 +413,9 @@ def _validate_and_clean_mermaid(diagram: str) -> str:
     - Missing 'flowchart TD' header (prepends it) — flowcharts only
     - 'graph TD' -> 'flowchart TD' (deprecated syntax)
     - Node IDs with spaces in definitions (e.g. "My Node[Label]" -> "My_Node[Label]")
-    - Trailing garbage after the diagram (prose, markdown, etc.)
+    - Trailing prose/markdown that the LLM appended after the diagram
+    - Unbalanced 'subgraph' blocks (missing 'end'), which are a hard syntax
+      error and render as "Syntax error in text" in the browser
 
     Non-flowchart diagrams (sequenceDiagram, erDiagram, gantt, ...) are
     preserved as-is apart from whitespace repair: flowchart-specific fixes
@@ -149,8 +445,16 @@ def _validate_and_clean_mermaid(diagram: str) -> str:
         cleaned = re.sub(r'^\s*graph\s+TD\b', 'flowchart TD', cleaned, flags=re.IGNORECASE)
         diagram_type = "flowchart"
 
-    if diagram_type != "flowchart":
+    # --- 2b. Repair arrow spellings Mermaid would reject ------------------
+    # Runs for every diagram type: a garbled arrow ('->->' in a sequence
+    # diagram, a bare '->' in a flowchart) is a hard parse error that hides
+    # the entire diagram behind Mermaid's "Syntax error in text" artwork.
+    cleaned = _repair_mermaid_arrows(cleaned, diagram_type)
+
+    if diagram_type not in ("flowchart", "graph"):
         # Non-flowchart diagram: flowchart-specific fixes would corrupt it.
+        # ('graph' is the deprecated alias of 'flowchart' and shares its
+        # syntax, so it takes the same path.)
         # Only normalize excessive blank lines.
         cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
         return cleaned.strip()
@@ -175,9 +479,13 @@ def _validate_and_clean_mermaid(diagram: str) -> str:
         if first_word.lower() in {kw.lower() for kw in _MERMAID_KEYWORDS}:
             return line
         # Match:  <id with spaces>[label]  or  <id with spaces>(label)
-        # The ID must start with a letter and can contain spaces before the bracket/paren.
+        # The ID must start with a letter and can contain spaces before the
+        # bracket/paren. Hyphens stay out of the ID character class because
+        # they are also part of link operators: including them let the ID
+        # swallow an operator up to the next bracket, so
+        # 'Ledger --x Legacy["Core"]' became 'Ledger_--x_Legacy["Core"]'.
         m = re.match(
-            r'^(\s*)([a-zA-Z][a-zA-Z0-9_\-\s]*?)\s*(\[\[?|\(\()(.*)$',
+            r'^(\s*)([a-zA-Z][a-zA-Z0-9_\s]*?)\s*(\[\[?|\(\(?|\{\{?)(.*)$',
             line,
         )
         if not m:
@@ -186,6 +494,10 @@ def _validate_and_clean_mermaid(diagram: str) -> str:
         # Only fix if the ID actually contains spaces
         if ' ' not in node_id.strip():
             return line
+
+        # Never rewrite an edge statement whose operator ended up in the ID.
+        if _MERMAID_LINK_OPERATOR_RE.search(node_id):
+            return line
         clean_id = re.sub(r'\s+', '_', node_id.strip())
         return f'{indent}{clean_id}{bracket}{rest}'
 
@@ -193,40 +505,162 @@ def _validate_and_clean_mermaid(diagram: str) -> str:
     lines = [_fix_node_id_line(line) for line in lines]
     cleaned = '\n'.join(lines)
 
+    # --- 3b. Quote edge labels Mermaid cannot parse unquoted ---------------
+    # 'A -->|Fetch Rate (60s)| B' is a Mermaid syntax error; quoting the label
+    # is what makes the diagram render at all.
+    cleaned = _quote_edge_labels(cleaned)
+
     # --- 4. Remove trailing garbage after the diagram (flowcharts only) ---
-    # Stop at the first blank line that is followed by non-diagram content,
-    # or at the first line that doesn't look like Mermaid syntax at all.
-    _VALID_LINE_RE = re.compile(
-        r'^\s*(flowchart|graph|subgraph|end|classDef|class|click|linkStyle|style|direction'
-        r'|[a-zA-Z_][a-zA-Z0-9_\-.]*\s*(\[\[?|\(\(?|\{\{?|-->|---|\.\.|==>|==|<->|->|<-|<--))',
-        re.IGNORECASE,
-    )
-    _BLANK_RE = re.compile(r'^\s*$')
-
-    valid_lines = []
-    blank_seen = False
-    for line in lines:
-        stripped = line.strip()
-        if _BLANK_RE.match(line):
-            blank_seen = True
-            valid_lines.append(line)
-            continue
-        if blank_seen and not _VALID_LINE_RE.match(stripped):
-            # Blank line followed by non-diagram content -> stop
-            break
-        blank_seen = False
-        if _VALID_LINE_RE.match(stripped):
-            valid_lines.append(line)
-        else:
-            # First line that doesn't look like Mermaid syntax -> stop
-            break
-
-    cleaned = '\n'.join(valid_lines).strip()
+    # Prose that the LLM appended *after* the diagram is dropped; only trailing
+    # lines are considered, so no interior diagram statement can be lost.
+    cleaned = _strip_trailing_non_diagram_lines(cleaned)
 
     # Remove excessive blank lines
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
 
+    # --- 5. Balance subgraph blocks (flowcharts only) ---
+    # An unclosed 'subgraph' is a hard Mermaid syntax error ("Syntax error in
+    # text" in the browser). Close what is still open and drop stray 'end'
+    # statements so an incomplete diagram still renders.
+    cleaned = _balance_subgraph_blocks(cleaned)
+
     return cleaned
+
+
+# Any CommonMark fence line (up to 3 leading spaces).
+_ANY_FENCE_RE = re.compile(r"^[ \t]{0,3}```(.*)$")
+
+# A fence-like line indented too deeply to count as a fence in Markdown
+# (renders as indented code instead).
+_INDENTED_FENCE_RE = re.compile(r"^[ \t]{4,}```(.*)$")
+
+
+def _normalize_mermaid_fences(text: str) -> str:
+    """
+    Rewrite every Mermaid diagram fence in *text* into a clean, balanced
+    ```mermaid block so downstream Markdown rendering always produces
+    <code class="language-mermaid"> (which the HTML converter turns into a
+    rendered diagram).
+
+    Repairs the failure modes LLMs actually produce:
+    - fences tagged with the diagram type instead of "mermaid"
+      (```flowchart TD ...), which Markdown renders as language-flowchart
+      code boxes that the diagram renderer ignores;
+    - unbalanced fences (a missing closing fence), which shift every later
+      fence's open/close pairing so prose lands inside code boxes and
+      diagram code lands in plain paragraphs;
+    - deeply indented fences, which Markdown treats as indented code.
+
+    Genuine non-diagram fences (```json, ```python, ...) are preserved
+    untouched. Idempotent: already-clean documents pass through unchanged.
+    """
+    if not text or "```" not in text:
+        return text
+
+    lines = text.splitlines()
+    total = len(lines)
+    out: list[str] = []
+    in_fence = False
+    in_mermaid = False
+    content_since_open = False
+
+    def _next_meaningful(start: int) -> str:
+        for k in range(start, total):
+            stripped = lines[k].strip()
+            if stripped:
+                return stripped
+        return ""
+
+    def _looks_like_diagram_start(line: str) -> bool:
+        if not line:
+            return False
+        first_word = _normalize_diagram_token(line.split(None, 1)[0])
+        return first_word in _MERMAID_DIAGRAM_TYPES
+
+    i = 0
+    while i < total:
+        line = lines[i]
+        fence = _ANY_FENCE_RE.match(line)
+        if fence is None:
+            indented = _INDENTED_FENCE_RE.match(line)
+            if indented is None:
+                out.append(line)
+                if in_fence and line.strip():
+                    content_since_open = True
+                i += 1
+                continue
+            # Dedent so Markdown sees a real fence, then re-process.
+            line = "```" + indented.group(1)
+            fence = _ANY_FENCE_RE.match(line)
+            if fence is None:  # pragma: no cover - defensive
+                out.append(lines[i])
+                i += 1
+                continue
+
+        info = fence.group(1).strip()
+        first_token = info.split(None, 1)[0].lower() if info else ""
+        is_mermaid_info = (
+            first_token == "mermaid"
+            or _normalize_diagram_token(first_token) in _MERMAID_DIAGRAM_TYPES
+        )
+
+        if not in_fence:
+            # Opening position.
+            if is_mermaid_info:
+                out.append("```mermaid")
+                if first_token != "mermaid" and info:
+                    # The diagram-type header lived on the fence line
+                    # (```flowchart TD); re-emit it as the first content line.
+                    out.append(info)
+                    content_since_open = True
+                else:
+                    content_since_open = False
+                in_fence = True
+                in_mermaid = True
+            elif not info and _looks_like_diagram_start(_next_meaningful(i + 1)):
+                # Bare ``` directly before diagram content.
+                out.append("```mermaid")
+                in_fence = True
+                in_mermaid = True
+                content_since_open = False
+            else:
+                # Genuine non-diagram fence (or bare fence before prose).
+                out.append(line)
+                in_fence = True
+                in_mermaid = False
+                content_since_open = False
+        else:
+            # Closing position.
+            if in_mermaid and is_mermaid_info:
+                if not content_since_open:
+                    # Redundant opener (```mermaid immediately followed by
+                    # ```flowchart TD): skip the fence, keep the header.
+                    if first_token != "mermaid" and info:
+                        out.append(info)
+                        content_since_open = True
+                    # else: bare duplicate opener, drop it.
+                else:
+                    # Previous block never closed: close it, then open anew.
+                    out.append("```")
+                    out.append("```mermaid")
+                    if first_token != "mermaid" and info:
+                        out.append(info)
+                        content_since_open = True
+                    else:
+                        content_since_open = False
+                # stay in_fence / in_mermaid
+            else:
+                out.append("```")
+                in_fence = False
+                in_mermaid = False
+                content_since_open = False
+        i += 1
+
+    if in_fence:
+        # Unclosed fence at end of text: close it.
+        out.append("```")
+
+    return "\n".join(out)
 
 
 # ---------------------------------------------------------------------------
@@ -763,6 +1197,15 @@ def build_master_blueprint(
     dp = _clean_agent_header(dp_output)
     rw = _clean_agent_header(rw_output)
 
+    # Normalize diagram fences (```flowchart-style tags, unbalanced pairs,
+    # indented fences) before extraction so no raw or broken fences leak
+    # into the final document.
+    ba = _normalize_mermaid_fences(ba)
+    sa = _normalize_mermaid_fences(sa)
+    ta = _normalize_mermaid_fences(ta)
+    dp = _normalize_mermaid_fences(dp)
+    rw = _normalize_mermaid_fences(rw)
+
     # ======================================================================
     # SECTION 1 — Delivery Overview
     # RW owns final synthesis.
@@ -1199,4 +1642,6 @@ def build_master_blueprint(
 *MindMesh Multi-Agent Engine — Autonomous Enterprise Architecture Blueprinting*
 """
 
-    return blueprint_md
+    # Final safety net: guarantee every diagram fence in the assembled
+    # document is a clean, balanced ```mermaid block.
+    return _normalize_mermaid_fences(blueprint_md)
