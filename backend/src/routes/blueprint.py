@@ -1,12 +1,15 @@
 import json
+import re
 import uuid
+import hmac
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from src.config import settings
 from src.crew import create_crew, run_agents_step_by_step, build_master_blueprint
 from src.utils.output_file import OUTPUT_DIR, save_output
 from src.utils.html_converter import markdown_to_html
@@ -20,25 +23,46 @@ from src.db import (
 
 router = APIRouter(prefix="/blueprints", tags=["Blueprints"])
 
+RUN_ID_PATTERN = re.compile(r"[0-9a-f]{12}")
+
+
+def verify_api_key(request: Request) -> None:
+    """Shared-secret header dependency for all /blueprints routes.
+
+    Skips the check when API_SECRET_KEY is empty (development mode).
+    """
+    if not settings.API_SECRET_KEY:
+        return
+    provided = request.headers.get("X-API-Key", "")
+    if not hmac.compare_digest(provided, settings.API_SECRET_KEY):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
 
 class BlueprintRequest(BaseModel):
-    business_idea: str
-    technology_preference: str 
-    cloud_preference: str 
-    expected_daily_traffic: str 
-    delivery_timeline_months: int
-    data_hosting_country: str 
+    business_idea: str = Field(min_length=15, max_length=5000)
+    technology_preference: str = Field(min_length=1, max_length=100)
+    cloud_preference: str = Field(min_length=1, max_length=100)
+    expected_daily_traffic: str = Field(min_length=1, max_length=100)
+    delivery_timeline_months: int = Field(ge=1, le=36)
+    data_hosting_country: str = Field(min_length=1, max_length=100)
 
 
-@router.get("", status_code=200)
-@router.get("/list", status_code=200)
-@router.get("/history", status_code=200)
-async def list_blueprints():
+def _validate_run_id(run_id: str) -> None:
+    if not RUN_ID_PATTERN.fullmatch(run_id):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid run_id '{run_id}'. Must be 12 lowercase hex characters.",
+        )
+
+
+@router.get("", status_code=200, dependencies=[Depends(verify_api_key)])
+@router.get("/list", status_code=200, dependencies=[Depends(verify_api_key)])
+@router.get("/history", status_code=200, dependencies=[Depends(verify_api_key)])
+async def list_blueprints(request: Request):
     """List all saved blueprints and history from SQLite database."""
     history = get_blueprint_history(limit=100)
     run_ids = [item["run_id"] for item in history]
 
-    # Fallback to filesystem if DB was empty but files exist
     if not run_ids:
         outputs_dir = OUTPUT_DIR
         if outputs_dir.exists():
@@ -54,23 +78,18 @@ async def list_blueprints():
     }
 
 
-@router.post("/stream")
+@router.post("/stream", dependencies=[Depends(verify_api_key)])
 async def stream_blueprint_execution(payload: BlueprintRequest):
-    """
-    Stream agent execution step-by-step using Server-Sent Events (SSE) and save to SQLite.
-    """
     run_id = str(uuid.uuid4())[:12]
     payload_dict = payload.model_dump()
 
     async def sse_event_stream():
         try:
             async for event_data in run_agents_step_by_step(payload_dict, run_id=run_id):
-                # When complete event is produced, persist to SQLite DB and files
                 if event_data.get("event") == "complete":
                     html_content = event_data.get("html", "")
                     md_content = event_data.get("markdown", "")
-                    
-                    # Persist to SQLite DB
+
                     try:
                         save_blueprint_record(
                             run_id=run_id,
@@ -82,10 +101,9 @@ async def stream_blueprint_execution(payload: BlueprintRequest):
                     except Exception as db_err:
                         print(f"Database save warning: {db_err}")
 
-                    # Also save fallback file outputs
                     save_output(f"{run_id}.html", html_content)
                     save_output(f"{run_id}.md", md_content)
-                    
+
                     event_data["file_saved"] = f"outputs/{run_id}.html"
 
                 yield f"data: {json.dumps(event_data)}\n\n"
@@ -110,19 +128,16 @@ async def stream_blueprint_execution(payload: BlueprintRequest):
     )
 
 
-@router.post("", status_code=201)
-@router.post("/generate", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(verify_api_key)])
+@router.post("/generate", status_code=201, dependencies=[Depends(verify_api_key)])
 async def create_blueprint(payload: BlueprintRequest):
-    """
-    Synchronous / standard generation endpoint saving to SQLite DB.
-    """
     run_id = str(uuid.uuid4())[:12]
     payload_dict = payload.model_dump()
 
     try:
         crew = create_crew(**payload_dict)
         result = await crew.kickoff_async()
-        
+
         if hasattr(result, "tasks_output") and len(result.tasks_output) >= 4:
             ba_out = result.tasks_output[0].raw
             sa_out = result.tasks_output[1].raw
@@ -140,10 +155,9 @@ async def create_blueprint(payload: BlueprintRequest):
             )
         else:
             final_output = result.raw if hasattr(result, "raw") else str(result)
-        
+
         html_content = markdown_to_html(final_output, title=f"MindMesh Blueprint - {run_id}")
-        
-        # Save to SQLite Database
+
         save_blueprint_record(
             run_id=run_id,
             inputs=payload_dict,
@@ -171,10 +185,10 @@ async def create_blueprint(payload: BlueprintRequest):
         )
 
 
-@router.get("/{run_id}", status_code=200)
+@router.get("/{run_id}", status_code=200, dependencies=[Depends(verify_api_key)])
 async def get_blueprint(run_id: str):
-    """Retrieve saved blueprint output from SQLite database or fallback files."""
-    # First attempt from SQLite DB
+    _validate_run_id(run_id)
+
     db_record = get_blueprint_by_run_id(run_id)
     if db_record:
         md_content = db_record.get("markdown_content", "")
@@ -193,14 +207,13 @@ async def get_blueprint(run_id: str):
             "cloud_preference": db_record.get("cloud_preference", "")
         }
 
-    # Fallback to filesystem
     outputs_dir = OUTPUT_DIR
     html_file = outputs_dir / f"{run_id}.html"
     md_file = outputs_dir / f"{run_id}.md"
 
     if not html_file.exists() and not md_file.exists():
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail=f"Blueprint output for run_id '{run_id}' not found."
         )
 
@@ -218,9 +231,10 @@ async def get_blueprint(run_id: str):
     }
 
 
-@router.delete("/{run_id}", status_code=200)
+@router.delete("/{run_id}", status_code=200, dependencies=[Depends(verify_api_key)])
 async def delete_blueprint(run_id: str):
-    """Delete a specific blueprint from SQLite database and outputs."""
+    _validate_run_id(run_id)
+
     if run_id == "final_output":
         raise HTTPException(
             status_code=400,

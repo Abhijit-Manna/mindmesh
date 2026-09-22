@@ -43,7 +43,7 @@ def render_form_view():
             value=st.session_state.form_data.get("business_idea") or "",
             placeholder="Describe your product concept, target users, primary features, and core business workflow...",
             height=125,
-            help="Required: Minimum 20 characters describing your application idea."
+            help="Required: Minimum 15 characters describing your application idea."
         )
 
         col1, col2 = st.columns(2)
@@ -83,7 +83,6 @@ def render_form_view():
                 step=1,
                 help="Whole number of months to target MVP launch."
             )
-            cur_country = st.session_state.form_data.get("data_hosting_country")
             cur_country = st.session_state.form_data.get("data_hosting_country")
             data_hosting_country = st.text_input(
                 "6. Data Hosting Region / Jurisdiction *",
@@ -134,10 +133,10 @@ def render_form_view():
             errors.append("Please select a Technology Stack.")
         if cloud_preference == "-- Select Cloud Infrastructure --":
             errors.append("Please select a Cloud Infrastructure preference.")
-        if expected_daily_traffic == "-- Select Expected Daily Traffic --":
-            errors.append("Please select Expected Daily Traffic.")
-        if data_hosting_country == "-- Select Data Hosting Region --":
-            errors.append("Please select a Data Hosting Region.")
+        if not expected_daily_traffic or not expected_daily_traffic.strip():
+            errors.append("Please enter Expected Daily Traffic.")
+        if not data_hosting_country or not data_hosting_country.strip():
+            errors.append("Please enter a Data Hosting Region.")
 
         if errors:
             for err in errors:

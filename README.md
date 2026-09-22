@@ -366,7 +366,19 @@ FastAPI also publishes the interactive contract at `/docs` and the machine-reada
 }
 ```
 
-Pydantic validates the JSON shape and primitive types. Business-level option validation is primarily performed in the Streamlit form; API clients should still send meaningful, non-empty values.
+Pydantic validates the JSON shape, primitive types, and field bounds:
+
+| Field | Type | Minimum | Maximum |
+| --- | --- | --- | --- |
+| `business_idea` | string | 15 chars | 5000 chars |
+| `technology_preference` | string | 1 char | 100 chars |
+| `cloud_preference` | string | 1 char | 100 chars |
+| `expected_daily_traffic` | string | 1 char | 100 chars |
+| `delivery_timeline_months` | integer | 1 | 36 |
+| `data_hosting_country` | string | 1 char | 100 chars |
+
+Invalid input returns HTTP `422` automatically. Business-level option
+validation is primarily performed in the Streamlit form.
 
 ### `GET /health` and `GET /api/v1/health`
 
@@ -416,7 +428,7 @@ Runs the same five-agent process but returns `text/event-stream`. Each message i
 Example:
 
 ```text
-data: {"event":"init","run_id":"efc2fc1f-032","message":"Initialized autonomous multi-agent pipeline with quality evaluation gates.","progress":3}
+data: {"event":"init","run_id":"efc2fc1f-032","message":"Initialized multi-agent pipeline with quality evaluation gates.","progress":3}
 
 data: {"event":"agent_start","agent":"Business Analyst","step":1,"total":5,"role":"Requirements & MVP Scope Analyst","message":"...","progress":5}
 
@@ -495,6 +507,10 @@ Returns a saved blueprint from SQLite first, then falls back to `{run_id}.md` an
 }
 ```
 
+The `sections` object maps each agent role to its extracted content from
+the canonical 14-section report: Business Analyst → §2, Solution Architect
+→ §9, Technology Advisor → §3, Delivery Planner → §4+§5+§6 combined.
+
 If the run does not exist, the endpoint returns HTTP `404`:
 
 ```json
@@ -502,6 +518,10 @@ If the run does not exist, the endpoint returns HTTP `404`:
   "detail": "Blueprint output for run_id 'unknown-id' not found."
 }
 ```
+
+`run_id` must be exactly 12 lowercase hexadecimal characters
+(`[0-9a-f]{12}`). Invalid values (including path-traversal attempts such as
+`../x` or `..\x`) return HTTP `400`.
 
 ### `DELETE /api/v1/blueprints/{run_id}`
 
@@ -521,7 +541,10 @@ The reserved `final_output` artifact cannot be deleted and returns HTTP `400`. A
 
 ### CORS
 
-The backend currently enables all origins, methods, and headers to support local Streamlit/Vite-style clients. This is convenient for development but should be narrowed to known frontend origins before production deployment.
+The backend restricts CORS to `http://localhost:8501` (the Streamlit
+frontend) with explicit methods and headers. Credentials are disabled to
+prevent origin-reflection attacks. To allow a different frontend origin, edit
+`backend/main.py` before deploying.
 
 ## Persistence and generated files
 
@@ -553,6 +576,7 @@ All backend settings are loaded from `backend/.env` through `pydantic-settings`.
 | Variable | Required | Default/example | Purpose |
 | --- | --- | --- | --- |
 | `APP_NAME` | No | `MindMesh API` | FastAPI title |
+| `API_SECRET_KEY` | No | empty | Shared-secret for `/blueprints` routes; skipped when empty |
 | `GEMINI_API_KEY_BA` | Yes | placeholder | Business Analyst credential |
 | `GEMINI_API_KEY_SA` | Yes | placeholder | Solution Architect credential |
 | `GEMINI_API_KEY_TA` | Yes | placeholder | Technology Advisor credential |
@@ -586,10 +610,12 @@ After adding an agent, update the crew ordering in `src/crew.py`, the streaming 
 
 ### Changing the report contract
 
-The report structure is centralized in `src/blueprint_builder.py`. If headings change, update the corresponding extraction patterns in:
+The report structure is centralized in `src/blueprint_builder.py`. If
+headings change, update the corresponding extraction patterns in:
 
-- `backend/src/utils/section_parser.py`
-- `frontend/views/dashboard_view.py`
+- `backend/src/utils/section_parser.py` — maps agent tabs to canonical
+  `## N.` headings (BA→§2, SA→§9, TA→§3, DP→§4+§5+§6 combined)
+- `frontend/views/dashboard_view.py` — consumes the API `sections` field
 
 This keeps API `sections`, dashboard tabs, and generated Markdown aligned.
 
@@ -631,7 +657,16 @@ The API returns a `500` for synchronous failures and emits an SSE `error` event 
 
 ### History is empty or a report cannot be reopened
 
-The backend resolves storage paths from the backend source location, so database and output paths do not depend on the terminal's current directory. Confirm that `backend/db/mindmesh.db` and `backend/outputs` are writable. Existing database records and generated HTML files are reused during filesystem synchronization.
+The backend resolves storage paths from the backend source location, so
+database and output paths do not depend on the terminal's current directory.
+Confirm that `backend/db/mindmesh.db` and `backend/outputs` are writable.
+Existing database records and generated HTML files are reused during
+filesystem synchronization.
+
+The `run_id` for a saved blueprint is the first 12 characters of a UUID and
+matches `[0-9a-f]{12}`. If a history entry appears to be missing, verify the
+database is not empty and that the output directory contains the matching
+`.md`/`.html` files.
 
 ### The generated report is slow
 
@@ -652,10 +687,10 @@ Choose **Dark** from the Streamlit main menu and allow the app to rerun. MindMes
 ## Limitations and production considerations
 
 - **Local-only persistence:** SQLite and local files are suitable for a single development instance, not concurrent horizontally scaled workers.
-- **Open CORS policy:** Replace `allow_origins=["*"]` with an explicit allowlist.
+- **CORS:** Restricted to `http://localhost:8501` with credentials disabled. Widen explicitly for production.
 - **Secrets:** Store provider keys in a secret manager in production; never place them in source control or frontend code.
-- **Authentication:** The current API has no authentication or authorization layer.
-- **Rate limiting:** The current API does not enforce per-user or per-IP generation quotas.
+- **Authentication:** A shared-secret `X-API-Key` header is available on all `/blueprints` routes when `API_SECRET_KEY` is set. It is skipped when the key is empty (development mode).
+- **Rate limiting:** The current API does not enforce per-user or per-IP generation quotas. A concurrency semaphore is not yet implemented.
 - **Long-running requests:** LLM generation can take minutes. Production deployments should consider a job queue, durable job state, worker processes, and reconnectable progress streams.
 - **Observability:** Add structured logs, correlation IDs, provider metrics, token/cost tracking, and error monitoring before operating at scale.
 - **Output validation:** Generated architecture should be reviewed by qualified engineers and validated with threat modeling, load testing, cost estimation, and jurisdiction-specific compliance checks.

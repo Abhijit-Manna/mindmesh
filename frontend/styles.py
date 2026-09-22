@@ -834,7 +834,7 @@ body:has(.stApp.st-emotion-cache-13k62yr) {
     }
 
     [data-testid="stTabs"] button[aria-selected="true"] {
-        color: #ff4b4b !important;
+        color: #f0f6fc !important;
     }
 }
 
@@ -937,7 +937,7 @@ html[data-theme="dark"] [data-testid="stTabs"] button {
 }
 
 html[data-theme="dark"] [data-testid="stTabs"] button[aria-selected="true"] {
-    color: #ff4b4b !important;
+    color: #f0f6fc !important;
 }
 </style>
 """

@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     # ==========================================
     APP_NAME: str = "MindMesh API"
 
+    # API secret for /blueprints endpoints. Leave empty to disable
+    # header checking (development only).
+    API_SECRET_KEY: str = ""
+
     # ==========================================
     # Gemini API Keys
     # ==========================================

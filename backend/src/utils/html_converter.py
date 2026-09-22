@@ -5,6 +5,93 @@ import os
 import html as html_lib
 import shutil
 import markdown
+import bleach
+
+
+BLEACH_ALLOWED_TAGS = [
+    "a", "abbr", "b", "blockquote", "br", "caption", "cite", "code",
+    "col", "colgroup", "dd", "del", "div", "dl", "dt", "em", "figcaption",
+    "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img",
+    "li", "mark", "ol", "p", "pre", "q", "s", "small", "span", "strong",
+    "sub", "sup", "table", "tbody", "td", "tfoot", "th", "thead", "tr",
+    "u", "ul", "var", "wbr",
+]
+
+BLEACH_ALLOWED_ATTRS = {
+    "*": ["class", "id"],
+    "a": ["href", "title"],
+    "img": ["src", "alt", "title"],
+    "td": ["colspan", "rowspan"],
+    "th": ["colspan", "rowspan"],
+}
+
+
+def _convert_latex_to_text(text: str) -> str:
+    """
+    Convert simple LaTeX math expressions in prose to readable text.
+    Only processes inline math ($...$) - leaves code blocks and Mermaid untouched.
+
+    Uses word-based replacements to avoid HTML escaping by markdown parser.
+    """
+    if not text:
+        return text
+
+    # Pattern to match inline math: $...$ but not $$...$$ (display math)
+    # and not inside code blocks
+    def replace_inline_math(match):
+        latex = match.group(1)
+        # Common simple conversions - use words to avoid HTML escaping
+        conversions = {
+            r'\\text\{ms\}': 'ms',
+            r'\\text\{s\}': 's',
+            r'\\%': '%',
+            r'\\ge': 'at least ',
+            r'\\le': 'at most ',
+            r'\\gt': 'greater than ',
+            r'\\lt': 'less than ',
+            r'\\approx': 'approx. ',
+            r'\\times': 'x',
+            r'\\cdot': '*',
+            r'\\pm': '+/-',
+            r'\\infty': 'infinity',
+            # Raw comparison operators that appear in math expressions
+            r'>=': 'at least ',
+            r'<=': 'at most ',
+            r'>': 'greater than ',
+            r'<': 'less than ',
+        }
+        result = latex
+        for pattern, replacement in conversions.items():
+            result = re.sub(pattern, replacement, result)
+        # Remove any remaining LaTeX commands like \text{...}
+        result = re.sub(r'\\text\{([^}]+)\}', r'\1', result)
+        # Remove braces
+        result = result.replace('{', '').replace('}', '')
+        # Clean up any remaining backslashes
+        result = result.replace('\\', '')
+        return result
+
+    # Replace $...$ but not $$...$$
+    # Negative lookbehind/lookahead to avoid display math
+    text = re.sub(r'(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)', replace_inline_math, text)
+    return text
+
+
+def _sanitize_html(html_content: str) -> str:
+    """
+    Strip dangerous HTML (XSS vectors) while preserving safe content.
+
+    Applied after markdown conversion and before templating. Uses bleach
+    with an allowlist of tags and attributes required by the document
+    stylesheet. Event handlers, script/iframe/object tags, and
+    javascript: URLs are removed.
+    """
+    return bleach.clean(
+        html_content,
+        tags=BLEACH_ALLOWED_TAGS,
+        attributes=BLEACH_ALLOWED_ATTRS,
+        strip=True,
+    )
 
 
 def remove_emojis(text: str) -> str:
@@ -24,19 +111,6 @@ def remove_emojis(text: str) -> str:
     # Also remove common emoji surrogate artefacts if any
     cleaned = re.sub(r"[🏛🎯📋🏗⚡🚀💡🔒📈⏱️🎉🗑️👁️💳🏥📦📑⚙️🧪🟢🔴🟡]", "", cleaned)
     return cleaned
-
-
-def _decode_html_entities(text: str) -> str:
-    """Decode HTML entities that the Markdown library may have escaped."""
-    return (
-        text
-        .replace("&gt;", ">")
-        .replace("&lt;", "<")
-        .replace("&amp;", "&")
-        .replace("&quot;", '"')
-        .replace("&#39;", "'")
-        .replace("&nbsp;", " ")
-    )
 
 
 def mermaid_to_svg(mermaid_code: str) -> str | None:
@@ -159,7 +233,7 @@ def convert_mermaid_blocks(html: str) -> str:
         raw_code = match.group(1)
 
         # Decode HTML entities introduced by the Markdown library
-        mermaid_code = _decode_html_entities(raw_code)
+        mermaid_code = html_lib.unescape(raw_code)
         mermaid_code = _extract_mermaid_code(mermaid_code)
 
         # Attempt server-side SVG pre-rendering
@@ -195,6 +269,9 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
     clean_markdown = remove_emojis(markdown_text)
     clean_title = remove_emojis(title)
 
+    # Convert LaTeX math in prose BEFORE markdown processing
+    clean_markdown = _convert_latex_to_text(clean_markdown)
+
     html_content = markdown.markdown(
         clean_markdown,
         extensions=[
@@ -206,6 +283,7 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
         ],
     )
 
+    html_content = _sanitize_html(html_content)
     html_content = convert_mermaid_blocks(html_content)
 
     return f"""<!DOCTYPE html>
@@ -225,7 +303,7 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
     mermaid.initialize({{
         startOnLoad: true,
         theme: "default",
-        securityLevel: "loose"
+        securityLevel: "strict"
     }});
 </script>
 
@@ -379,6 +457,7 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
             border-collapse: collapse;
             margin: 24px 0;
             font-size: 0.9rem;
+            table-layout: fixed;
         }}
 
         th {{
@@ -388,12 +467,18 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
             text-align: left;
             padding: 10px 14px;
             border: 1px solid var(--border);
+            overflow-wrap: anywhere;
+            word-wrap: break-word;
+            hyphens: auto;
         }}
 
         td {{
             padding: 10px 14px;
             border: 1px solid var(--border);
             color: var(--text-muted);
+            overflow-wrap: anywhere;
+            word-wrap: break-word;
+            hyphens: auto;
         }}
 
         tr:nth-child(even) {{
@@ -481,7 +566,7 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
         </div>
         {html_content}
         <div class="doc-footer">
-            Generated autonomously by SolutionForge AI • Verified Enterprise Architecture Document
+            Generated by MindMesh
         </div>
     </div>
 </body>

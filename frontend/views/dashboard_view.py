@@ -2,61 +2,9 @@
 MindMesh Frontend - Completed Dashboard View Component
 """
 
-import re
 from urllib.parse import quote
 
 import streamlit as st
-
-
-def extract_sections_from_markdown(md_text: str) -> dict:
-    """Fallback client-side section extractor from synthesized master blueprint markdown."""
-    if not md_text:
-        return {}
-
-    sections = {
-        "business_analyst": "",
-        "solution_architect": "",
-        "technology_advisor": "",
-        "delivery_planner": ""
-    }
-
-    patterns = {
-        "business_analyst": r"##\s*Section 1:[^\n]*\n(.*?)(?=\n##\s*Section 2:|\Z)",
-        "solution_architect": r"##\s*Section 2:[^\n]*\n(.*?)(?=\n##\s*Section 3:|\Z)",
-        "technology_advisor": r"##\s*Section 3:[^\n]*\n(.*?)(?=\n##\s*Section 4:|\Z)",
-        "delivery_planner": r"##\s*Section 4:[^\n]*\n(.*?)(?=\n---\s*\n\*MindMesh|\Z)"
-    }
-
-    for key, pat in patterns.items():
-        m = re.search(pat, md_text, re.DOTALL | re.IGNORECASE)
-        if m:
-            content = m.group(1).strip()
-            content = re.sub(r"\n---\s*$", "", content).strip()
-            content = re.sub(r"^\*Synthesized by[^\n]*\*\s*\n*", "", content, flags=re.IGNORECASE).strip()
-            sections[key] = content
-
-    # Fallback keyword matching
-    if not sections["business_analyst"]:
-        m = re.search(r"(?:###?\s*Business Analysis[^\n]*\n)(.*?)(?=(?:###?\s*(?:High-Level\s*)?Solution Architecture)|\Z)", md_text, re.DOTALL | re.IGNORECASE)
-        if m:
-            sections["business_analyst"] = m.group(1).strip()
-
-    if not sections["solution_architect"]:
-        m = re.search(r"(?:###?\s*(?:High-Level\s*)?Solution Architecture[^\n]*\n)(.*?)(?=(?:###?\s*Technology Stack)|\Z)", md_text, re.DOTALL | re.IGNORECASE)
-        if m:
-            sections["solution_architect"] = m.group(1).strip()
-
-    if not sections["technology_advisor"]:
-        m = re.search(r"(?:###?\s*Technology Stack[^\n]*\n)(.*?)(?=(?:###?\s*Implementation Roadmap|###?\s*Delivery Plan)|\Z)", md_text, re.DOTALL | re.IGNORECASE)
-        if m:
-            sections["technology_advisor"] = m.group(1).strip()
-
-    if not sections["delivery_planner"]:
-        m = re.search(r"(?:###?\s*(?:Implementation Roadmap|Delivery Plan)[^\n]*\n)(.*?)(?=\n---\s*\n\*MindMesh|\Z)", md_text, re.DOTALL | re.IGNORECASE)
-        if m:
-            sections["delivery_planner"] = m.group(1).strip()
-
-    return sections
 
 
 def render_dashboard_view():
@@ -68,8 +16,6 @@ def render_dashboard_view():
 
     # Parse sections if missing in response
     sections = res.get("sections") or {}
-    if not sections or not any(sections.values()):
-        sections = extract_sections_from_markdown(markdown_content)
 
     st.success(f" Architecture Blueprint Generated & Saved to SQLite DB! (Run ID: `{run_id}`)")
 

@@ -2,6 +2,7 @@
 MindMesh Frontend - Real-Time Execution View Component
 """
 
+import html as html_lib
 import time
 import streamlit as st
 from api_client import APIClient
@@ -11,7 +12,7 @@ from constants import ARCHITECTURE_INSIGHTS, AGENT_METADATA
 def render_execution_view(api_client: APIClient):
     """Render the real-time Server-Sent Events (SSE) animated multi-agent execution view."""
     st.subheader("Multi-Agent Engine Active — Real-Time Execution")
-    st.caption("Our autonomous agent team is synthesizing your requirements one by one via live backend streaming.")
+    st.caption("Our specialist agent team is synthesizing your requirements one by one via live backend streaming.")
 
     progress_bar = st.progress(5)
     status_placeholder = st.empty()
@@ -67,7 +68,7 @@ def render_execution_view(api_client: APIClient):
 
     for event in event_stream:
         ev_type = event.get("event")
-        msg = event.get("message", "")
+        msg = html_lib.escape(event.get("message", ""))
         pct = event.get("progress", 10)
         timestamp = time.strftime("%H:%M:%S")
 
@@ -77,7 +78,7 @@ def render_execution_view(api_client: APIClient):
             status_placeholder.markdown("**Pipeline Initialized:** Starting agent sequence...")
 
         elif ev_type == "agent_start":
-            agent_name = event.get("agent", "Agent")
+            agent_name = html_lib.escape(event.get("agent", "Agent"))
             step = event.get("step", 1)
             current_active_idx = min(step - 1, num_agents - 1)
             render_agent_cards(current_active_idx, completed_agent_indices)
@@ -89,12 +90,12 @@ def render_execution_view(api_client: APIClient):
             insight_placeholder.markdown(f"<div class='insight-box'>{ARCHITECTURE_INSIGHTS[current_active_idx % len(ARCHITECTURE_INSIGHTS)]}</div>", unsafe_allow_html=True)
 
         elif ev_type == "evaluation_start":
-            agent_name = event.get("agent", "Agent")
+            agent_name = html_lib.escape(event.get("agent", "Agent"))
             accumulated_logs.append(f"<span class='terminal-time'>[{timestamp}] [Quality Gate]</span> 🔍 {msg}")
             progress_bar.progress(pct)
 
         elif ev_type == "evaluation":
-            agent_name = event.get("agent", "Agent")
+            agent_name = html_lib.escape(event.get("agent", "Agent"))
             score = event.get("score", 0.85)
             passed = event.get("passed", True)
             badge = "✅" if passed else "⚠️"
@@ -102,12 +103,12 @@ def render_execution_view(api_client: APIClient):
             progress_bar.progress(pct)
 
         elif ev_type == "agent_retry":
-            agent_name = event.get("agent", "Agent")
+            agent_name = html_lib.escape(event.get("agent", "Agent"))
             accumulated_logs.append(f"<span class='terminal-time'>[{timestamp}] [Retry Gate]</span> 🔄 {msg}")
             progress_bar.progress(pct)
 
         elif ev_type == "agent_complete":
-            agent_name = event.get("agent", "Agent")
+            agent_name = html_lib.escape(event.get("agent", "Agent"))
             step = event.get("step", 1)
             completed_agent_indices.add(step - 1)
             if step < num_agents:
@@ -124,7 +125,9 @@ def render_execution_view(api_client: APIClient):
             break
 
         elif ev_type == "error":
-            stream_error = event.get("error") or event.get("message") or "Unknown error"
+            stream_error = html_lib.escape(
+                event.get("error") or event.get("message") or "Unknown error"
+            )
             accumulated_logs.append(f"<span class='terminal-time'>[{timestamp}] [Error]</span> ❌ {stream_error}")
             break
 

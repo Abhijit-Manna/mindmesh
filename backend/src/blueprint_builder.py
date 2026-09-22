@@ -4,6 +4,109 @@ from typing import Any, Dict
 
 
 # ---------------------------------------------------------------------------
+# Mermaid validation and cleanup
+# ---------------------------------------------------------------------------
+
+def _validate_and_clean_mermaid(diagram: str) -> str:
+    """
+    Conservative validation and cleanup for Mermaid flowchart syntax.
+
+    Only fixes the most common issues that actually cause Mermaid syntax errors:
+    - Missing 'flowchart TD' header (prepends it)
+    - 'graph TD' -> 'flowchart TD' (deprecated syntax)
+    - Node IDs with spaces in definitions (e.g. "My Node[Label]" -> "My_Node[Label]")
+    - Trailing garbage after the diagram (prose, markdown, etc.)
+
+    Does NOT touch edges or aggressively sanitize node IDs, since those
+    transformations often corrupt valid diagrams.
+    """
+    if not diagram:
+        return diagram
+
+    cleaned = diagram.strip()
+
+    # --- 1. Ensure it starts with flowchart TD ---
+    if not re.match(r'^\s*flowchart\s+TD\b', cleaned, re.IGNORECASE):
+        if re.match(r'^\s*graph\s+TD\b', cleaned, re.IGNORECASE):
+            cleaned = re.sub(r'^\s*graph\s+TD\b', 'flowchart TD', cleaned, flags=re.IGNORECASE)
+        else:
+            cleaned = 'flowchart TD\n' + cleaned
+
+    # --- 2. Fix node IDs with spaces in definitions ---
+    # Only match lines that look like node definitions:  ID[Label]  or  ID(Label)
+    # where the ID contains spaces. We are careful not to match Mermaid keywords
+    # like subgraph, end, classDef, class, click, linkStyle, style, direction.
+    _MERMAID_KEYWORDS = {
+        'subgraph', 'end', 'classDef', 'class', 'click', 'linkStyle',
+        'style', 'direction', 'flowchart', 'graph', 'actor', 'participant',
+        'Note', 'alt', 'else', 'opt', 'loop', 'par', 'rect', 'autonumber',
+    }
+
+    def _fix_node_id_line(line: str) -> str:
+        """Fix spaces in node ID for a single line, if it is a node definition."""
+        stripped = line.strip()
+        # Skip empty lines, comments, and known keywords
+        if not stripped or stripped.startswith('%'):
+            return line
+        first_word = stripped.split(None, 1)[0]
+        if first_word.lower() in {kw.lower() for kw in _MERMAID_KEYWORDS}:
+            return line
+        # Match:  <id with spaces>[label]  or  <id with spaces>(label)
+        # The ID must start with a letter and can contain spaces before the bracket/paren.
+        m = re.match(
+            r'^(\s*)([a-zA-Z][a-zA-Z0-9_\-\s]*?)\s*(\[\[?|\(\()(.*)$',
+            line,
+        )
+        if not m:
+            return line
+        indent, node_id, bracket, rest = m.groups()
+        # Only fix if the ID actually contains spaces
+        if ' ' not in node_id.strip():
+            return line
+        clean_id = re.sub(r'\s+', '_', node_id.strip())
+        return f'{indent}{clean_id}{bracket}{rest}'
+
+    lines = cleaned.split('\n')
+    lines = [_fix_node_id_line(line) for line in lines]
+    cleaned = '\n'.join(lines)
+
+    # --- 3. Remove trailing garbage after the diagram ---
+    # Stop at the first blank line that is followed by non-diagram content,
+    # or at the first line that doesn't look like Mermaid syntax at all.
+    _VALID_LINE_RE = re.compile(
+        r'^\s*(flowchart|graph|subgraph|end|classDef|class|click|linkStyle|style|direction'
+        r'|[a-zA-Z_][a-zA-Z0-9_\-.]*\s*(\[\[?|\(\(?|\{\{?|-->|---|\.\.|==>|==|<->|->|<-|<--))',
+        re.IGNORECASE,
+    )
+    _BLANK_RE = re.compile(r'^\s*$')
+
+    valid_lines = []
+    blank_seen = False
+    for line in lines:
+        stripped = line.strip()
+        if _BLANK_RE.match(line):
+            blank_seen = True
+            valid_lines.append(line)
+            continue
+        if blank_seen and not _VALID_LINE_RE.match(stripped):
+            # Blank line followed by non-diagram content -> stop
+            break
+        blank_seen = False
+        if _VALID_LINE_RE.match(stripped):
+            valid_lines.append(line)
+        else:
+            # First line that doesn't look like Mermaid syntax -> stop
+            break
+
+    cleaned = '\n'.join(valid_lines).strip()
+
+    # Remove excessive blank lines
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+
+    return cleaned
+
+
+# ---------------------------------------------------------------------------
 # Section extraction
 # ---------------------------------------------------------------------------
 
@@ -239,7 +342,7 @@ def _extract_mermaid(text: str) -> str:
         diagram = mermaid_match.group(1).strip()
 
         if re.search(r"\bflowchart\s+TD\b", diagram, re.IGNORECASE):
-            return diagram
+            return _validate_and_clean_mermaid(diagram)
 
     # Fallback: any fenced code block containing flowchart TD.
     fenced_matches = re.findall(
@@ -250,7 +353,7 @@ def _extract_mermaid(text: str) -> str:
 
     for block in fenced_matches:
         if re.search(r"\bflowchart\s+TD\b", block, re.IGNORECASE):
-            return block.strip()
+            return _validate_and_clean_mermaid(block.strip())
 
     # Final fallback: locate raw flowchart TD.
     raw_match = re.search(
@@ -259,9 +362,69 @@ def _extract_mermaid(text: str) -> str:
     )
 
     if raw_match:
-        return raw_match.group(1).strip()
+        return _validate_and_clean_mermaid(raw_match.group(1).strip())
 
     return ""
+
+
+def _extract_rw_supporting_diagrams(text: str) -> str:
+    """
+    Extract supporting Mermaid diagrams from the Report Writer §9.
+
+    The first mermaid block in RW §9 is the authoritative diagram
+    (owned by the Solution Architect). Subsequent blocks are supporting
+    diagrams produced by the Report Writer and must be preserved.
+
+    Returns formatted markdown of supporting diagrams, or empty string
+    if there are none.
+    """
+    if not text:
+        return ""
+
+    matches = re.findall(
+        r"```mermaid\s*\n([\s\S]*?)```",
+        text,
+        re.IGNORECASE,
+    )
+
+    if len(matches) <= 1:
+        return ""
+
+    supporting = matches[1:]
+    return "\n\n".join(
+        f"```mermaid\n{_validate_and_clean_mermaid(diag)}\n```" for diag in supporting
+    )
+
+
+def _is_substantive(text: str) -> bool:
+    """
+    Check whether §9 prose contains real architecture reasoning.
+
+    A caption-only remnant (e.g., three orphaned diagram descriptions
+    left after stripping the authoritative Mermaid) has zero architecture
+    value. This guard prevents it from shadowing the Solution Architect
+    fallback in the block chain below.
+    """
+    if not text or len(text.strip()) < 50:
+        return False
+
+    architecture_terms = [
+        "component", "service", "api", "database", "server", "security",
+        "authentication", "authorization", "scalab",
+        "resilien", "integration", "infrastructure", "network",
+        "credential", "secret", "gateway", "load balancer", "firewall",
+        "cache", "queue", "microservice", "throughput", "latency",
+        "container", "orchestrat", "workload", "persistence", "topology",
+        "boundary", "timeout", "retry", "auth", "encrypt", "token",
+    ]
+    lower = text.lower()
+    matched_terms = [term for term in architecture_terms if term in lower]
+    has_architecture = len(matched_terms) >= 2
+
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    has_substance = any(len(p.split()) > 15 for p in paragraphs)
+
+    return has_architecture and has_substance
 
 
 # ---------------------------------------------------------------------------
@@ -457,12 +620,19 @@ def build_master_blueprint(
     #
     # RW provides the synthesized prose.
     # SA provides the authoritative Mermaid diagram.
+    # Supporting diagrams from RW are preserved and appended after
+    # the authoritative one.
     # ======================================================================
     architecture_prose = _extract_numbered_section(rw, 9)
 
+    # Preserve RW supporting diagrams before stripping.
+    # The first mermaid block is the authoritative diagram (owned by SA);
+    # remaining blocks are supporting diagrams that must not be lost.
+    rw_supporting = _extract_rw_supporting_diagrams(architecture_prose)
+
     # RW Section 9 may contain the same Mermaid diagram required by the
     # Report Writer prompt. Strip it here so the final blueprint contains
-    # exactly one architecture diagram, owned by the Solution Architect.
+    # exactly one authoritative architecture diagram, owned by SA.
     architecture_prose = re.sub(
         r"```mermaid\s*[\s\S]*?```",
         "",
@@ -481,14 +651,27 @@ def build_master_blueprint(
         "\n\n",
         architecture_prose,
     ).strip()
-    architecture_prose = _first_non_empty(
-        architecture_prose,
-        _extract_numbered_section(sa, 1),
-        _extract_numbered_section(sa, 2),
-        _extract_numbered_section(sa, 3),
-        _extract_numbered_section(sa, 4),
-        _para(sa, 5),
-    )
+
+    # Caption-only remnants (e.g., orphaned diagram captions) have zero
+    # architecture value. Fall through to SA fallbacks instead of
+    # shadowing them.
+    if _is_substantive(architecture_prose):
+        architecture_prose = _first_non_empty(
+            architecture_prose,
+            _extract_numbered_section(sa, 1),
+            _extract_numbered_section(sa, 2),
+            _extract_numbered_section(sa, 3),
+            _extract_numbered_section(sa, 4),
+            _para(sa, 5),
+        )
+    else:
+        architecture_prose = _first_non_empty(
+            _extract_numbered_section(sa, 1),
+            _extract_numbered_section(sa, 2),
+            _extract_numbered_section(sa, 3),
+            _extract_numbered_section(sa, 4),
+            _para(sa, 5),
+        )
 
     architecture_prose = re.sub(
         r"(?im)^\s*#{1,4}\s*authoritative\s+architecture\s+diagram\s*$",
@@ -511,6 +694,10 @@ def build_master_blueprint(
             f"{authoritative_mermaid}\n"
             "```"
         )
+
+    # Append RW supporting diagrams after the authoritative one.
+    if rw_supporting:
+        architecture += "\n\n" + rw_supporting
 
     if not architecture:
         architecture = "_Architecture design not available._"

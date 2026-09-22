@@ -2,6 +2,7 @@
 MindMesh Frontend - Sidebar Recent History Component
 """
 
+import html as html_lib
 import time
 import urllib.parse
 import streamlit as st
@@ -43,12 +44,12 @@ def render_sidebar_history(api_client: APIClient, is_healthy: bool):
                     with st.container():
                         st.markdown(f"""
                         <div class="sidebar-history-card">
-                            <div class="history-title">{display_title}</div>
+                            <div class="history-title">{html_lib.escape(display_title)}</div>
                             <div class="history-meta">
-                                <span>{created or 'Recent'}</span>
-                                <span class="history-tag">{tag_text}</span>
+                                <span>{html_lib.escape(created or 'Recent')}</span>
+                                <span class="history-tag">{html_lib.escape(tag_text)}</span>
                             </div>
-                            <div class="history-id">ID: {r_id}</div>
+                            <div class="history-id">ID: {html_lib.escape(r_id)}</div>
                         </div>
                         """, unsafe_allow_html=True)
 

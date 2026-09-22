@@ -14,13 +14,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for frontend clients (Streamlit on port 8501, Vite, etc.)
+# CORS locked to known frontend origins. Credentials disabled to prevent
+# origin-reflection attacks. Methods and headers are explicit.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["http://localhost:8501"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept", "X-API-Key"],
 )
 
 # Route registrations

@@ -58,24 +58,6 @@ CLOUD_OPTIONS = [
     "No Preference"
 ]
 
-TRAFFIC_OPTIONS = [
-    "-- Select Expected Daily Traffic --",
-    "10,000 DAU (Standard MVP Scale)",
-    "50,000 DAU (Peak 2,500 req/sec)",
-    "100,000 DAU (High Concurrency & Load)",
-    "1,000,000+ DAU (Global Enterprise Scale)"
-]
-
-COUNTRY_OPTIONS = [
-    "-- Select Data Hosting Region --",
-    "United States",
-    "India",
-    "Germany (EU GDPR Compliant)",
-    "Singapore (APAC Region)",
-    "United Kingdom",
-    "Global Multi-Region"
-]
-
 AGENT_METADATA = [
     {"name": "Business Analyst", "icon": "📋", "role": "Requirements & MVP Scope"},
     {"name": "Solution Architect", "icon": "🏗️", "role": "System Architecture & Components"},
