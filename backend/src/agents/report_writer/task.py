@@ -53,6 +53,15 @@ Expected Daily Traffic: {inputs.get('expected_daily_traffic', 'N/A')}
 Delivery Timeline: {inputs.get('delivery_timeline_months', 6)} months
 Data Hosting Country: {inputs.get('data_hosting_country', 'N/A')}
 
+PREFERENCE SENSITIVITY RULE
+---------------------------
+These user preferences are hard inputs and must be reflected in the final
+blueprint. Any change in technology preference, cloud preference, traffic,
+residency, or timeline must influence the final recommendation, rationale,
+architecture decisions, platform choices, staffing implications, compliance and
+operational constraints, and risk profile. The final document must not ignore or
+soften these preferences.
+
 UPSTREAM SPECIALIST DELIVERABLES
 --------------------------------
 These are the actual specialist outputs. Treat them as the primary factual source.
@@ -139,9 +148,21 @@ staffing numbers, dates, regulations, metrics, or scope. Do not quietly move
 deferred features into MVP.
 
 10. OUTPUT BUDGET
-The document must be detailed, but every paragraph must earn its place. Spend
-space on decisions, implementation detail, sequencing, trade-offs, dependencies,
-and acceptance criteria rather than repeated background prose.
+This is not an executive summary. It is the authoritative implementation-ready
+blueprint. Do not compress the solution into a short narrative with a few
+bullets. Each section must be materially developed and useful to an execution
+team.
+
+Minimum detail target per major section:
+- 1-3 substantive paragraphs, or a detailed table that explains the real work,
+  rationale, dependencies, and proof of completion
+- concrete ownership, sequencing, risk/mitigation, and acceptance evidence
+- preserved architecture, technology, delivery, and quality rationale from the
+  upstream specialists
+- no generic filler or repeated background summary text
+
+Every paragraph must earn its place by carrying a decision, risk, dependency, or
+implementation consequence.
 
 REQUIRED OUTPUT STRUCTURE
 -------------------------
@@ -280,13 +301,19 @@ Return only the completed blueprint in Markdown.
         description=description,
         expected_output=(
             "A single, detailed Enterprise Solution Blueprint in Markdown with all 14 core "
-            "sections in order. It must preserve upstream requirements, architecture, "
-            "technology rationale/trade-offs, implementation work, staffing, timeline, "
-            "dependencies, testing, release/readiness, risks, future evolution and open "
-            "questions. Include the authoritative Solution Architect Mermaid topology and "
-            "use at least 3 additional supporting Mermaid diagrams for a sufficiently "
-            "complex solution when upstream material supports them. Do not invent facts, "
-            "decisions, dates, staffing or scope."
+            "sections in order and substantive content in every section. It must preserve "
+            "upstream requirements, architecture, technology rationale/trade-offs, "
+            "implementation work, staffing, timeline, dependencies, testing, "
+            "release/readiness, risks, future evolution and open questions without "
+            "collapsing into a terse executive summary. Include the authoritative "
+            "Solution Architect Mermaid topology and use at least 3 additional supporting "
+            "Mermaid diagrams for a sufficiently complex solution when upstream material "
+            "supports them. Each section should contain real decision detail, concrete "
+            "activities, ownership, sequencing and acceptance criteria rather than short "
+            "bullets. Most importantly, the blueprint must explicitly reflect the user’s "
+            "technology, cloud, traffic, residency, and timeline preferences, and any change "
+            "in those inputs should visibly change the recommendations and final narrative. "
+            "Do not invent facts, decisions, dates, staffing or scope."
         ),
         context=[],
     )

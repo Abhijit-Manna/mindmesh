@@ -31,7 +31,7 @@ def _require_value(value: str, label: str) -> str:
     return value.strip()
 
 
-def get_llm(api_key: str, model: str) -> LLM:
+def get_llm(api_key: str, model: str, temperature: float = 0.4) -> LLM:
     """Create an LLM instance with a specific API key and model."""
     safe_api_key = _require_value(api_key, "API key")
     safe_model = _require_value(model, "model")
@@ -39,7 +39,8 @@ def get_llm(api_key: str, model: str) -> LLM:
     return LLM(
         model=safe_model,
         api_key=safe_api_key,
-        max_tokens=8192,
+        max_tokens=16384,
+        temperature=temperature,
     )
 
 

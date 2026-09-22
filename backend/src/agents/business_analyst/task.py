@@ -36,6 +36,13 @@ Delivery Timeline:
 Data Hosting Country / Region:
 {data_hosting_country}
 
+================ PREFERENCE SENSITIVITY RULE ================
+These user preferences are binding design constraints. They must materially
+influence the analysis and the final recommendations. A change in preferred
+technology stack, cloud platform, data residency, or delivery timeline must be
+reflected in the proposed MVP boundaries, architecture implications, risks, and
+downstream planning decisions. Do not treat these as generic notes.
+
 ================ ANALYSIS OBJECTIVE ================
 
 Translate the business idea and constraints into an implementation-independent
@@ -253,9 +260,11 @@ Do NOT:
 - design the system architecture
 - invent unsupported regulatory requirements
 - invent precise metrics without a basis
+- produce a short summary that omits real requirements detail
 
 The result must be detailed enough that an architect and delivery planner can
 use it as a reliable business baseline without reconstructing the analysis.
+It should read like a substantive requirements baseline, not an executive recap.
 """
 
     return Task(
@@ -267,8 +276,12 @@ use it as a reliable business baseline without reconstructing the analysis.
             "criteria and priorities, quantified NFRs, a defensible MVP boundary, meaningful "
             "business/product approach comparisons, business data needs, integrations and "
             "dependencies, risks, assumptions, open discovery questions, and a clear "
-            "downstream handoff. The document must remain implementation-independent and "
-            "must distinguish facts, assumptions, and unresolved questions."
+            "downstream handoff. It must be substantive and specific, with real tables and "
+            "decision detail rather than a brief summary. The document must remain "
+            "implementation-independent and must distinguish facts, assumptions, and unresolved "
+            "questions. Most importantly, the recommendations and scope must explicitly reflect "
+            "the user’s technology, cloud, traffic, residency, and timeline preferences and any "
+            "changes in those inputs."
         ),
         agent=agent,
     )

@@ -27,6 +27,13 @@ Delivery Timeline:
 
 This is a hard constraint.
 
+================ PREFERENCE SENSITIVITY RULE ================
+The project plan must adapt to the user’s stated preferences, especially
+technology preference, cloud preference, traffic assumptions, and country-level
+residency constraints. If these preferences change, the delivery plan should
+update sequencing, staffing emphasis, infrastructure choices, testing scope,
+operational readiness, and risk profile accordingly.
+
 The MVP must be designed, implemented, integrated, tested, security-validated,
 production-readied, and released within this timeline.
 
@@ -426,6 +433,10 @@ lead, QA lead, security lead, DevOps engineer, and project stakeholder can
 understand what happens, when it happens, who is responsible, and what proves
 completion.
 
+Do not produce a high-level roadmap with generic labels; include concrete
+workstreams, staffing logic, dependencies, milestones, testing gates, and
+production-readiness checks.
+
 Prefer concrete activities, tables, sequencing, dependencies, owners, and exit
 criteria over generic project-management language.
 
@@ -451,9 +462,12 @@ Business Scope
             "path and dependencies, effort and complexity, testing and quality "
             "gates, security and production readiness, deployment and go-live, "
             "project-specific risks and mitigations, and post-MVP evolution. "
-            "The plan must fit within the hard delivery timeline and remain "
-            "consistent with the upstream Business Analyst, Solution Architect, "
-            "and Technology Advisor decisions."
+            "It must be substantive and concrete, with real work items, owners, dependencies, "
+            "and exit criteria, rather than a brief summary. The plan must fit within the "
+            "hard delivery timeline and remain consistent with the upstream Business Analyst, "
+            "Solution Architect, and Technology Advisor decisions. It must also reflect the "
+            "user’s stated technology, cloud, traffic, and residency preferences and adapt as "
+            "those inputs change."
         ),
         agent=agent,
         context=context_tasks,

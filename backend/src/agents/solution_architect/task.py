@@ -38,6 +38,14 @@ Delivery Timeline:
 Data Hosting Country / Region:
 {data_hosting_country}
 
+================ PREFERENCE SENSITIVITY RULE ================
+The user’s stated technology, cloud, traffic, and residency preferences are
+binding architectural constraints. If these inputs change even slightly, the
+architecture, trade-offs, topology, security boundaries, and deployment model
+must reflect that change. Do not treat cloud or technology preference as a
+header-only field; make it visible in the design choices, operational trade-offs,
+and implementation assumptions.
+
 ================ ARCHITECTURE OBJECTIVE ================
 
 Translate the approved requirements into an implementable architecture.
@@ -333,6 +341,9 @@ Do not:
 
 Prefer concrete architecture explanations, responsibility tables, flow
 descriptions, and explicit trade-offs over generic architecture vocabulary.
+Do not produce a short summary; the architecture must be materially detailed so
+that the Technology Advisor and Delivery Planner can implement it without
+reconstructing design decisions.
 
 The final architecture must be realistic for the stated MVP and should provide a
 clear foundation for the Technology Advisor and Delivery Planner.
@@ -348,9 +359,12 @@ clear foundation for the Technology Advisor and Delivery Planner.
             "scalability and resilience, integration architecture, deployment "
             "topology, deferred architecture patterns, validation findings, "
             "and exactly one valid authoritative Mermaid flowchart TD diagram. "
-            "The architecture must be traceable to the Business Analyst "
+            "This should be a substantial, implementation-ready architecture, not a brief "
+            "summary. The architecture must be traceable to the Business Analyst "
             "requirements and realistic for the stated traffic and delivery "
-            "timeline."
+            "timeline. It must explicitly reflect the user’s technology, cloud, "
+            "data residency, and scale preferences, and any change in those inputs "
+            "must change the architecture reasoning and trade-offs accordingly."
         ),
         agent=agent,
         context=[ba_task],

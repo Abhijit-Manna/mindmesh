@@ -35,6 +35,10 @@ Check:
 - open questions
 - downstream handoff
 
+Fail a Business Analyst output when it collapses into a short executive summary
+without the required requirements depth, traceability, acceptance criteria,
+assumptions, and MVP boundary detail.
+
 Do not penalize the BA for not selecting implementation technologies.
 """,
 
@@ -57,6 +61,10 @@ Check:
 - deferred architecture patterns
 - one valid authoritative Mermaid architecture diagram
 
+Fail a Solution Architect output when it is little more than a diagram or a brief
+summary without detailed component responsibilities, flows, security, resilience,
+trade-offs, and deployment rationale.
+
 Do not require concrete vendor/product selections.
 """,
 
@@ -78,8 +86,13 @@ Check:
 - technology risks
 - final decisions
 
+Fail a Technology Advisor output when it reduces to a short list of tools without
+real rationale, trade-offs, architecture fit, or operational implications.
+
 The technology stack must implement the approved architecture rather than
-silently redesigning it.
+silently redesigning it. Any mismatch with the user's explicitly stated
+technology preference, cloud preference, data residency, or traffic assumptions
+should be treated as a material deficiency.
 """,
 
         "delivery planner": """
@@ -103,7 +116,13 @@ Check:
 - delivery risks
 - post-MVP evolution
 
-The plan must fit within the hard delivery timeline.
+Fail a Delivery Planner output when it is only a high-level roadmap with no
+real workstreams, dependencies, staffing logic, quality gates, or production
+readiness plan.
+
+The plan must fit within the hard delivery timeline. A plan that ignores the
+user’s stated technology, cloud, traffic, or residency preferences should be
+scored down as a constraint-violation, even if it is otherwise polished.
 """,
 
         "report writer": """

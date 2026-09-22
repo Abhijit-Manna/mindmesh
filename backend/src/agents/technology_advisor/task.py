@@ -45,6 +45,11 @@ Delivery Timeline:
 Data Hosting Country / Region:
 {data_hosting_country}
 
+================ PREFERENCE SENSITIVITY RULE ================
+User preference is a primary decision input. The selected stack must reflect the
+stated technology preference and cloud preference, and small changes to those
+preferences must materially alter the recommended stack, cloud services, trade-offs,
+operational model, and deployment strategy. Do not treat them as decorative metadata.
 
 ================ TECHNOLOGY DECISION OBJECTIVE ================
 
@@ -379,6 +384,10 @@ How does it fit the architecture?
 How does it affect delivery?
 What assumption could change the decision?
 
+Do not produce a shallow list of technologies without rationale. The output must
+be a meaningful technology decision document that the Delivery Planner can use to
+size work, staffing, dependencies, testing, deployment, and operational effort.
+
 The final technology specification must give the Delivery Planner enough
 information to estimate implementation work, staffing, dependencies, testing,
 deployment, and operational effort realistically.
@@ -395,7 +404,9 @@ deployment, and operational effort realistically.
             "developer and operational tooling, technology risks, and final "
             "technology decisions. Major choices must be justified against the "
             "actual architecture, requirements, scale, delivery timeline, and "
-            "user constraints."
+            "user constraints, with real decision detail rather than a brief summary. "
+            "The recommendations must explicitly match the user’s technology and cloud "
+            "preferences and should change meaningfully when those preferences change."
         ),
         agent=agent,
         context=[ba_task, sa_task],
