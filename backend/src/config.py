@@ -41,6 +41,16 @@ class Settings(BaseSettings):
     EVALUATION_MODEL: str = ""
 
     # ==========================================
+    # OpenRouter Fallback
+    # ==========================================
+    # Used automatically when an agent's or evaluator's primary LLM call
+    # fails (demand spike, resource exhaustion, rate limit, outage, ...).
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_FALLBACK_MODEL: str = "openrouter/google/gemini-2.0-flash-001"
+    ENABLE_OPENROUTER_FALLBACK: bool = True
+    OPENROUTER_FALLBACK_ON_ALL_ERRORS: bool = True
+
+    # ==========================================
     # Serper.dev
     # ==========================================
     SERPER_API_KEY: str = ""

@@ -7,32 +7,155 @@ from typing import Any, Dict
 # Mermaid validation and cleanup
 # ---------------------------------------------------------------------------
 
+# Known Mermaid diagram-type keywords (lowercase for comparison).
+_MERMAID_DIAGRAM_TYPES = (
+    "flowchart", "graph", "sequencediagram", "classdiagram",
+    "statediagram", "erdiagram", "gitgraph", "gantt", "pie",
+    "mindmap", "timeline", "quadrantchart", "xychart", "journey",
+)
+
+
+def _first_meaningful_line(diagram: str) -> str:
+    """Return the first non-empty, non-comment line of a diagram."""
+    for line in diagram.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("%%"):
+            return stripped
+    return ""
+
+
+def _detect_mermaid_type(diagram: str) -> str | None:
+    """Return the Mermaid diagram-type keyword if the first meaningful line
+    starts with one, otherwise None."""
+    first_line = _first_meaningful_line(diagram)
+    if not first_line:
+        return None
+    first_word = first_line.split(None, 1)[0].lower()
+    if first_word in _MERMAID_DIAGRAM_TYPES:
+        return first_word
+    return None
+
+
+def _is_whitespace_corrupted(diagram: str) -> bool:
+    """
+    Detect LLM 'underscore corruption' such as:
+        flowchart_TD_____subgraph_ClientLayer_["Client Tier"]
+
+    Healthy Mermaid never glues a diagram-type keyword to an underscore, and
+    'subgraph'/'end' statements are never joined to the next keyword by
+    underscore runs.
+    """
+    first_line = _first_meaningful_line(diagram)
+    if not first_line:
+        return False
+    first_word = first_line.split(None, 1)[0].lower()
+    for keyword in _MERMAID_DIAGRAM_TYPES:
+        if first_word.startswith(keyword + "_"):
+            return True
+    if re.search(r"\b(end|subgraph)_{2,}\w", diagram):
+        return True
+    return False
+
+
+def _repair_whitespace_corruption(diagram: str) -> str:
+    """
+    Best-effort repair of underscore corruption.
+
+    Runs of 2+ underscores were collapsed newline+indentation; single
+    underscores between word characters were collapsed spaces. Quote contents
+    are repaired too, because the corruption also hit node labels.
+    """
+    # Corrupted arrows first: 'Traffic___>' was 'Traffic -->' with the
+    # arrow head partially underscored. Restore it before the generic
+    # underscore-run replacement turns it into a bogus line break.
+    repaired = re.sub(r"_{2,}>", " --> ", diagram)
+
+    repaired = re.sub(r"_{2,}", "\n    ", repaired)
+    repaired = re.sub(r"(?<=[A-Za-z0-9\)\]])_(?=[A-Za-z0-9\(\[-])", " ", repaired)
+
+    # A diagram-type keyword glued after the flowchart header (e.g.
+    # "flowchart TD sequenceDiagram" or "flowchart TD flowchart LR") must
+    # start its own line so that _strip_bogus_flowchart_header can drop the
+    # bogus header.
+    repaired = re.sub(
+        r"(?im)^([ \t]*flowchart[ \t]+(?:TD|LR|TB|BT|RL))[ \t]+"
+        r"((?:sequence|class|state|er)diagram|flowchart|graph|gantt|pie"
+        r"|mindmap|timeline|gitgraph|journey|quadrantchart|xychart)\b",
+        r"\1\n\2",
+        repaired,
+    )
+    return repaired.strip()
+
+
+def _strip_bogus_flowchart_header(diagram: str) -> str:
+    """
+    Remove a leading 'flowchart TD' line when the real diagram header
+    (e.g. 'sequenceDiagram') appears on the immediately following line.
+    Handles degenerate output like:
+        flowchart TD
+        sequenceDiagram
+            participant ...
+    """
+    lines = diagram.splitlines()
+    if len(lines) >= 2:
+        first = lines[0].strip().lower()
+        second = lines[1].strip()
+        second_word = second.split(None, 1)[0].lower() if second else ""
+        if (
+            first in ("flowchart td", "flowchart lr", "flowchart", "graph td")
+            and second_word in _MERMAID_DIAGRAM_TYPES
+        ):
+            return "\n".join(lines[1:]).lstrip()
+    return diagram
+
+
 def _validate_and_clean_mermaid(diagram: str) -> str:
     """
-    Conservative validation and cleanup for Mermaid flowchart syntax.
+    Conservative validation and cleanup for Mermaid syntax.
 
-    Only fixes the most common issues that actually cause Mermaid syntax errors:
-    - Missing 'flowchart TD' header (prepends it)
+    Fixes the most common issues that actually cause Mermaid syntax errors:
+    - LLM whitespace corruption (spaces/newlines collapsed to underscores)
+      is detected and repaired on a best-effort basis
+    - Missing 'flowchart TD' header (prepends it) — flowcharts only
     - 'graph TD' -> 'flowchart TD' (deprecated syntax)
     - Node IDs with spaces in definitions (e.g. "My Node[Label]" -> "My_Node[Label]")
     - Trailing garbage after the diagram (prose, markdown, etc.)
 
-    Does NOT touch edges or aggressively sanitize node IDs, since those
-    transformations often corrupt valid diagrams.
+    Non-flowchart diagrams (sequenceDiagram, erDiagram, gantt, ...) are
+    preserved as-is apart from whitespace repair: flowchart-specific fixes
+    (header injection, node-ID rewriting, line truncation) previously
+    destroyed them — e.g. a 'sequenceDiagram' was reduced to a bare
+    'flowchart TD' line.
     """
     if not diagram:
         return diagram
 
     cleaned = diagram.strip()
 
-    # --- 1. Ensure it starts with flowchart TD ---
-    if not re.match(r'^\s*flowchart\s+TD\b', cleaned, re.IGNORECASE):
-        if re.match(r'^\s*graph\s+TD\b', cleaned, re.IGNORECASE):
-            cleaned = re.sub(r'^\s*graph\s+TD\b', 'flowchart TD', cleaned, flags=re.IGNORECASE)
-        else:
-            cleaned = 'flowchart TD\n' + cleaned
+    # --- 0. Repair LLM whitespace corruption (spaces/newlines -> underscores)
+    if _is_whitespace_corrupted(cleaned):
+        cleaned = _strip_bogus_flowchart_header(
+            _repair_whitespace_corruption(cleaned)
+        )
 
-    # --- 2. Fix node IDs with spaces in definitions ---
+    # --- 1. Detect diagram type; only assume flowchart when unknown ---
+    diagram_type = _detect_mermaid_type(cleaned)
+    if diagram_type is None:
+        diagram_type = "flowchart"
+        cleaned = 'flowchart TD\n' + cleaned
+
+    # --- 2. Normalize deprecated 'graph TD' to 'flowchart TD' ---
+    if re.match(r'^\s*graph\s+TD\b', cleaned, re.IGNORECASE):
+        cleaned = re.sub(r'^\s*graph\s+TD\b', 'flowchart TD', cleaned, flags=re.IGNORECASE)
+        diagram_type = "flowchart"
+
+    if diagram_type != "flowchart":
+        # Non-flowchart diagram: flowchart-specific fixes would corrupt it.
+        # Only normalize excessive blank lines.
+        cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+        return cleaned.strip()
+
+    # --- 3. Fix node IDs with spaces in definitions (flowcharts only) ---
     # Only match lines that look like node definitions:  ID[Label]  or  ID(Label)
     # where the ID contains spaces. We are careful not to match Mermaid keywords
     # like subgraph, end, classDef, class, click, linkStyle, style, direction.
@@ -70,7 +193,7 @@ def _validate_and_clean_mermaid(diagram: str) -> str:
     lines = [_fix_node_id_line(line) for line in lines]
     cleaned = '\n'.join(lines)
 
-    # --- 3. Remove trailing garbage after the diagram ---
+    # --- 4. Remove trailing garbage after the diagram (flowcharts only) ---
     # Stop at the first blank line that is followed by non-diagram content,
     # or at the first line that doesn't look like Mermaid syntax at all.
     _VALID_LINE_RE = re.compile(
@@ -367,33 +490,172 @@ def _extract_mermaid(text: str) -> str:
     return ""
 
 
-def _extract_rw_supporting_diagrams(text: str) -> str:
+# A supporting-diagram caption line, e.g.:
+#   **Supporting Diagram 1: Instant P2P Transfer Request Sequence**
+#   #### Supporting Diagram 2 - Data Residency Lifecycle Flow
+#   Supporting Diagram 3: Deployment & Blue-Green Release Pipeline
+_SUPPORTING_CAPTION_RE = re.compile(
+    r"^\s*(?:#{1,6}\s*)?\**\s*supporting\s+diagram\s*#?\s*(\d+)\s*"
+    r"[:\-–—]\s*(.+?)\**\s*$",
+    re.IGNORECASE,
+)
+
+# Lines that terminate a caption block.
+_HEADING_LINE_RE = re.compile(r"^\s*#{1,6}\s+\S")
+_HR_LINE_RE = re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$")
+_FENCE_LINE_RE = re.compile(r"^\s*```")
+
+# A standalone "Supporting Diagrams" section heading (no number, no title).
+_SUPPORTING_SECTION_HEADING_RE = re.compile(
+    r"^\s*(?:#{1,6}\s*)?\**\s*supporting\s+diagrams\s*(?:[:\-–—]\s*)?\**\s*$",
+    re.IGNORECASE,
+)
+
+# A standalone "Authoritative Architecture Diagram" heading.
+_AUTHORITATIVE_HEADING_RE = re.compile(
+    r"^\s*#{1,4}\s*authoritative\s+architecture\s+diagram\s*$",
+    re.IGNORECASE,
+)
+
+# Leading "Explanation:" label variants on caption explanation text.
+# Handles "*Explanation:*", "**Explanation:**", "_Explanation:_",
+# "Explanation:", and "**Explanation** -" forms.
+_EXPLANATION_LABEL_RE = re.compile(
+    r"^\s*[*_]{0,2}\s*explanation\b[*_\s]*[:\-–—][*_\s]*",
+    re.IGNORECASE,
+)
+
+
+def _extract_rw_supporting_diagram_units(text: str) -> tuple[list, str]:
     """
-    Extract supporting Mermaid diagrams from the Report Writer §9.
+    Extract supporting diagram units (caption + Mermaid block) from the
+    Report Writer §9 text.
 
-    The first mermaid block in RW §9 is the authoritative diagram
-    (owned by the Solution Architect). Subsequent blocks are supporting
-    diagrams produced by the Report Writer and must be preserved.
+    The first Mermaid block in §9 is the authoritative diagram (owned by the
+    Solution Architect). Every later Mermaid block is a supporting diagram.
 
-    Returns formatted markdown of supporting diagrams, or empty string
-    if there are none.
+    Captions ("Supporting Diagram N: <name>" plus the explanation text that
+    follows) are paired with the supporting Mermaid blocks, so each diagram
+    can be presented together with its own name and explanation — instead of
+    all captions being grouped in one place and the diagrams dumped
+    separately.
+
+    Captions are paired with supporting diagrams by document order (the Nth
+    supporting block belongs to the Nth caption). This holds for every
+    layout the Report Writer produces: captions grouped together before the
+    diagrams, captions interleaved between diagrams, or each caption placed
+    directly after its diagram.
+
+    Returns:
+        (units, cleaned_text)
+        units: list of dicts {"name", "explanation", "mermaid"} in diagram
+               order. Diagrams without a caption receive a generic name and
+               an empty explanation; captions without a diagram are dropped.
+        cleaned_text: the input with every Mermaid fence, every caption
+               block, and any standalone "Supporting Diagrams" /
+               "Authoritative Architecture Diagram" heading removed, so no
+               orphaned captions remain in the prose.
     """
     if not text:
-        return ""
+        return [], ""
 
-    matches = re.findall(
-        r"```mermaid\s*\n([\s\S]*?)```",
-        text,
-        re.IGNORECASE,
-    )
+    lines = text.splitlines()
+    total = len(lines)
 
-    if len(matches) <= 1:
-        return ""
+    mermaid_blocks = []   # (start_idx, end_idx_exclusive, code)
+    caption_blocks = []   # (start_idx, end_idx_exclusive, name, explanation)
 
-    supporting = matches[1:]
-    return "\n\n".join(
-        f"```mermaid\n{_validate_and_clean_mermaid(diag)}\n```" for diag in supporting
-    )
+    i = 0
+    while i < total:
+        line = lines[i]
+
+        if not _FENCE_LINE_RE.match(line):
+            caption_match = _SUPPORTING_CAPTION_RE.match(line)
+            if caption_match:
+                name = caption_match.group(2).strip().strip("*").strip()
+                # Collect the explanation text until the next caption,
+                # heading, horizontal rule, or fenced block.
+                j = i + 1
+                while j < total:
+                    nxt = lines[j]
+                    if (
+                        _SUPPORTING_CAPTION_RE.match(nxt)
+                        or _HEADING_LINE_RE.match(nxt)
+                        or _HR_LINE_RE.match(nxt)
+                        or _FENCE_LINE_RE.match(nxt)
+                    ):
+                        break
+                    j += 1
+                explanation = "\n".join(lines[i + 1 : j]).strip()
+                caption_blocks.append((i, j, name, explanation))
+                i = j
+                continue
+            i += 1
+            continue
+
+        # Fenced block: capture Mermaid code, skip other languages.
+        is_mermaid = line.strip().lower().startswith("```mermaid")
+        j = i + 1
+        while j < total and not _FENCE_LINE_RE.match(lines[j]):
+            j += 1
+        if is_mermaid:
+            code = "\n".join(lines[i + 1 : j]).strip()
+            mermaid_blocks.append((i, min(j + 1, total), code))
+        i = j + 1 if j < total else total
+
+    # Pair captions with supporting diagrams by document order: the Nth
+    # supporting Mermaid block belongs to the Nth caption. This is correct
+    # whether captions are grouped before the diagrams, interleaved between
+    # them, or placed directly after each diagram. The first Mermaid block
+    # is the authoritative diagram (SA-owned) and has no caption of its own.
+    units = []
+    for d_idx, (_start, _end, code) in enumerate(mermaid_blocks[1:], start=1):
+        cleaned_code = _validate_and_clean_mermaid(code)
+        if not cleaned_code:
+            continue
+        name, explanation = "", ""
+        caption_idx = d_idx - 1
+        if caption_idx < len(caption_blocks):
+            _s, _e, name, explanation = caption_blocks[caption_idx]
+        units.append(
+            {
+                "name": name,
+                "explanation": explanation,
+                "mermaid": cleaned_code,
+            }
+        )
+
+    # --- Cleaned prose: drop fences, caption blocks, and the standalone ---
+    # --- "Supporting Diagrams" heading ------------------------------------
+    remove = set()
+    for start, end, _code in mermaid_blocks:
+        remove.update(range(start, end))
+    for start, end, _name, _expl in caption_blocks:
+        remove.update(range(start, end))
+    for idx, line in enumerate(lines):
+        if (
+            _SUPPORTING_SECTION_HEADING_RE.match(line)
+            or _AUTHORITATIVE_HEADING_RE.match(line)
+        ):
+            remove.add(idx)
+
+    kept = [line for idx, line in enumerate(lines) if idx not in remove]
+    cleaned_text = re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()
+
+    # Strip leading/trailing blank lines and horizontal rules left behind
+    # by the removals.
+    kept_lines = cleaned_text.splitlines() if cleaned_text else []
+
+    def _is_blank_or_rule(value: str) -> bool:
+        return not value.strip() or bool(_HR_LINE_RE.match(value))
+
+    start, end = 0, len(kept_lines)
+    while start < end and _is_blank_or_rule(kept_lines[start]):
+        start += 1
+    while end > start and _is_blank_or_rule(kept_lines[end - 1]):
+        end -= 1
+
+    return units, "\n".join(kept_lines[start:end]).strip()
 
 
 def _is_substantive(text: str) -> bool:
@@ -620,26 +882,24 @@ def build_master_blueprint(
     #
     # RW provides the synthesized prose.
     # SA provides the authoritative Mermaid diagram.
-    # Supporting diagrams from RW are preserved and appended after
-    # the authoritative one.
+    # Supporting diagrams from RW are preserved and appended after the
+    # authoritative one — each emitted as diagram + name + explanation.
     # ======================================================================
     architecture_prose = _extract_numbered_section(rw, 9)
 
-    # Preserve RW supporting diagrams before stripping.
+    # Preserve RW supporting diagrams (with their captions) before stripping.
     # The first mermaid block is the authoritative diagram (owned by SA);
-    # remaining blocks are supporting diagrams that must not be lost.
-    rw_supporting = _extract_rw_supporting_diagrams(architecture_prose)
+    # remaining blocks are supporting diagrams that must not be lost. The
+    # extractor also removes caption blocks and Mermaid fences from the
+    # prose, so no orphaned diagram names/explanations remain grouped at
+    # the top of the section.
+    rw_supporting_units, architecture_prose = _extract_rw_supporting_diagram_units(
+        architecture_prose
+    )
 
-    # RW Section 9 may contain the same Mermaid diagram required by the
-    # Report Writer prompt. Strip it here so the final blueprint contains
-    # exactly one authoritative architecture diagram, owned by SA.
-    architecture_prose = re.sub(
-        r"```mermaid\s*[\s\S]*?```",
-        "",
-        architecture_prose,
-        flags=re.IGNORECASE,
-    ).strip()
-
+    # Any remaining "Authoritative Architecture Diagram" heading is stripped
+    # here so the final blueprint contains exactly one authoritative
+    # architecture diagram, owned by SA and emitted below.
     architecture_prose = re.sub(
         r"(?im)^\s*#{1,4}\s*authoritative\s+architecture\s+diagram\s*$",
         "",
@@ -695,9 +955,33 @@ def build_master_blueprint(
             "```"
         )
 
-    # Append RW supporting diagrams after the authoritative one.
-    if rw_supporting:
-        architecture += "\n\n" + rw_supporting
+    # Append RW supporting diagrams after the authoritative one. Each unit is
+    # emitted as: diagram, then its name, then the explanation text, so every
+    # diagram appears together with its own caption instead of all captions
+    # being grouped separately from the diagrams.
+    if rw_supporting_units:
+        unit_blocks = []
+        for idx, unit in enumerate(rw_supporting_units, start=1):
+            title = unit["name"].strip()
+            display_name = (
+                f"Supporting Diagram {idx}: {title}" if title
+                else f"Supporting Diagram {idx}"
+            )
+            parts = [
+                "```mermaid\n"
+                f"{unit['mermaid']}\n"
+                "```",
+                f"**{display_name}**",
+            ]
+            explanation = _EXPLANATION_LABEL_RE.sub(
+                "", unit["explanation"], count=1
+            ).strip()
+            if explanation:
+                parts.append(f"*Explanation:* {explanation}")
+            unit_blocks.append("\n\n".join(parts))
+        architecture += (
+            "\n\n### Supporting Diagrams\n\n" + "\n\n".join(unit_blocks)
+        )
 
     if not architecture:
         architecture = "_Architecture design not available._"

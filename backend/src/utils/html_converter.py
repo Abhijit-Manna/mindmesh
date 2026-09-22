@@ -7,6 +7,8 @@ import shutil
 import markdown
 import bleach
 
+from src.blueprint_builder import _validate_and_clean_mermaid
+
 
 BLEACH_ALLOWED_TAGS = [
     "a", "abbr", "b", "blockquote", "br", "caption", "cite", "code",
@@ -236,6 +238,11 @@ def convert_mermaid_blocks(html: str) -> str:
         mermaid_code = html_lib.unescape(raw_code)
         mermaid_code = _extract_mermaid_code(mermaid_code)
 
+        # Repair/normalize the diagram (fixes LLM whitespace corruption such
+        # as 'flowchart_TD_____subgraph_...' and preserves non-flowchart
+        # diagram types) before attempting to render it.
+        mermaid_code = _validate_and_clean_mermaid(mermaid_code)
+
         # Attempt server-side SVG pre-rendering
         svg = mermaid_to_svg(mermaid_code)
         if svg:
@@ -452,12 +459,18 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
         }}
 
         /* Tables */
+        /* Wide tables scroll horizontally instead of squishing columns:
+           auto layout sizes columns to content; the block display enables
+           overflow scrolling when the table exceeds the page width. */
         table {{
-            width: 100%;
+            display: block;
+            width: fit-content;
+            max-width: 100%;
             border-collapse: collapse;
             margin: 24px 0;
             font-size: 0.9rem;
-            table-layout: fixed;
+            table-layout: auto;
+            overflow-x: auto;
         }}
 
         th {{
@@ -467,18 +480,17 @@ def markdown_to_html(markdown_text: str, title: str = "MindMesh Solution Bluepri
             text-align: left;
             padding: 10px 14px;
             border: 1px solid var(--border);
-            overflow-wrap: anywhere;
+            white-space: nowrap;
+            overflow-wrap: break-word;
             word-wrap: break-word;
-            hyphens: auto;
         }}
 
         td {{
             padding: 10px 14px;
             border: 1px solid var(--border);
             color: var(--text-muted);
-            overflow-wrap: anywhere;
+            overflow-wrap: break-word;
             word-wrap: break-word;
-            hyphens: auto;
         }}
 
         tr:nth-child(even) {{

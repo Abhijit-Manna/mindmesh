@@ -181,6 +181,19 @@ Do not generate an image.
 The Mermaid diagram is the canonical system topology and must not conflict with
 the architecture described in the rest of the document.
 
+MERMAID SYNTAX RULES (CRITICAL — the diagram is rendered automatically)
+
+- Write every diagram token separated by SINGLE spaces and normal line breaks.
+  Never merge words with underscores (e.g. "flowchart_TD_____subgraph_Client"
+  is CORRUPT output — it must be "flowchart TD\n    subgraph Client").
+- Preserve indentation with actual spaces (2 or 4) and real newlines between
+  statements. Do not collapse a multi-line diagram onto one line.
+- Keep "flowchart TD" alone on the first line of the block.
+- Quote every node/subgraph label that contains spaces, parentheses, slashes,
+  or punctuation: Node["Payment Gateway (PCI scope)"].
+- Use only valid Mermaid edge syntax (-->, -.->, ==>); do not invent arrows.
+- Do not place prose, headings, or tables inside the fenced mermaid block.
+
 QUALITY STANDARD
 
 The architecture should allow downstream teams to understand:

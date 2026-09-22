@@ -230,6 +230,7 @@ Open `backend\.env` and replace every placeholder with a real value. The backend
 - `GEMINI_API_KEY_RW`
 - `GEMINI_API_KEY_EV`
 - `SERPER_API_KEY`
+- `OPENROUTER_API_KEY` (optional — enables the automatic OpenRouter fallback when a primary LLM call fails)
 
 Do not commit `backend\.env` or expose API keys in the frontend. The frontend only calls the local backend; provider credentials are loaded by the backend.
 
@@ -590,6 +591,10 @@ All backend settings are loaded from `backend/.env` through `pydantic-settings`.
 | `RW_MODEL` | Yes | Gemini model name | Report Writer model |
 | `EVALUATION_MODEL` | Yes | Gemini model name | Evaluator model |
 | `SERPER_API_KEY` | Yes | placeholder | Serper search tool credential |
+| `OPENROUTER_API_KEY` | No | empty | OpenRouter credential; when set, failed primary LLM calls fall back to OpenRouter |
+| `OPENROUTER_FALLBACK_MODEL` | No | `openrouter/google/gemini-2.0-flash-001` | LiteLLM-style OpenRouter model id used by the fallback |
+| `ENABLE_OPENROUTER_FALLBACK` | No | `true` | Master switch for the OpenRouter fallback |
+| `OPENROUTER_FALLBACK_ON_ALL_ERRORS` | No | `true` | Fall back on any primary error; when `false`, only on transient provider errors |
 | `MAX_AGENT_RETRIES` | No | `2` | Maximum remediation retries per evaluated step |
 | `ENABLE_EVALUATION` | No | `true` | Enables evaluator quality gates |
 | `EVALUATION_THRESHOLD` | No | `0.70` | Minimum score required to pass |
@@ -652,6 +657,13 @@ Check:
 - The machine has outbound internet access.
 - Serper is available if an agent invokes web search.
 - The terminal output for the underlying CrewAI/provider exception.
+
+**OpenRouter fallback:** when `OPENROUTER_API_KEY` is set, a failed primary
+LLM call (demand spike, resource exhaustion, rate limit, outage, timeout, ...)
+is automatically retried on OpenRouter with `OPENROUTER_FALLBACK_MODEL`. The
+backend logs `Primary LLM (...) call failed (...); falling back to ...` when
+this happens. If OpenRouter is also unavailable, the original primary error is
+raised so the normal retry/`agent_retry` flow continues to apply.
 
 The API returns a `500` for synchronous failures and emits an SSE `error` event for streaming failures.
 

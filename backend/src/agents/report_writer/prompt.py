@@ -244,6 +244,35 @@ Rules:
 Supporting diagrams for delivery/process/operational explanation may be included
 only when they add real explanatory value and do not redefine system topology.
 
+MERMAID SYNTAX RULES (CRITICAL — diagrams are rendered automatically)
+
+Broken Mermaid produces a visible syntax error in the final document, so the
+diagram text must be emitted exactly as plain fenced code. Therefore:
+
+- Write every diagram token separated by SINGLE spaces and normal line breaks.
+  Never merge words with underscores (e.g. "flowchart_TD_____subgraph_Client"
+  is CORRUPT output — it must be "flowchart TD\n    subgraph Client").
+- Preserve indentation with actual spaces (2 or 4) and real newlines between
+  statements. A newline inside a fenced block is meaningful; do not collapse
+  multi-line diagrams onto one line.
+- Keep the diagram header on its own first line, e.g. "flowchart TD" or
+  "sequenceDiagram". Never concatenate two diagram types (e.g.
+  "flowchart_TD_sequenceDiagram").
+- Quote every node/subgraph label that contains spaces, parentheses, slashes,
+  or punctuation: Node["Payment Gateway (PCI scope)"].
+- Do not place prose, headings, or tables inside the fenced mermaid block.
+- Never wrap a diagram in more than one fence.
+
+FORMATTING RULES FOR PLANS AND TIMELINES
+
+- Render phases, milestones, sprints, and schedules as Markdown headings,
+  bullet lists, or tables — NEVER as fenced code blocks (```...```) and never
+  as ASCII diagrams. Fenced code blocks render as monospace preformatted text
+  in the final document and are reserved exclusively for Mermaid diagrams and
+  genuine code samples.
+- Use Markdown tables for milestone schedules (columns such as Milestone,
+  Timing, Exit Criteria, Critical Path) and bullet lists for phase sequences.
+
 QUALITY STANDARD
 
 The final blueprint should feel like a document that could be handed to:

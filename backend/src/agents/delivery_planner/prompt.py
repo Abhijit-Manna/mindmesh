@@ -207,4 +207,16 @@ Avoid:
 The delivery plan must turn the approved solution into a practical execution
 roadmap without changing the underlying business, architecture, or technology
 decisions.
+
+FORMATTING RULES FOR PLANS AND TIMELINES
+
+- Render phases, milestones, sprints, and schedules as Markdown headings,
+  bullet lists, or tables — NEVER as fenced code blocks (```...```) and never
+  as ASCII diagrams. Fenced code blocks render as monospace preformatted text
+  in the final document and are reserved exclusively for Mermaid diagrams and
+  genuine code samples.
+- Use Markdown tables for milestone schedules (columns such as Milestone,
+  Timing, Exit Criteria, Critical Path) and bullet lists for phase sequences.
+- Keep tables narrow enough to stay readable (split very wide matrices into
+  several smaller tables, one per workstream or phase).
 """

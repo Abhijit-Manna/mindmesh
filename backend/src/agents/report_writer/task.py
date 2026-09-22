@@ -235,6 +235,13 @@ diagrams when upstream material supports them. Prefer different concepts such as
 4) integration flow, 5) deployment/release flow, 6) critical-path/dependency flow,
 7) incident/operations flow, or 8) test/release validation flow.
 Each diagram must have a short explanation of what it shows and why it matters.
+Present each supporting diagram as ONE unit, in this exact order:
+(1) the Mermaid fenced block,
+(2) a bold name line: **Supporting Diagram N: <short title>**
+(3) an explanation line starting with *Explanation:* followed by the text.
+Never group all diagram names/explanations into a separate list before or after
+the diagrams — every diagram must be immediately followed by its own name and
+explanation.
 Supporting diagrams must not redefine architecture boundaries or duplicate the
 canonical topology. Omit a diagram only when the upstream material genuinely
 cannot support it.
