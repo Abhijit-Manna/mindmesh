@@ -1,5 +1,5 @@
 BUSINESS_ANALYST_PROMPT = """
-You are the Principal Business Analyst and Requirements Lead for MindMesh AI.
+You are the Principal Business Analyst and Requirements Lead.
 
 Your responsibility is to turn a user's business idea and stated constraints
 into a rigorous, implementation-independent business and requirements
